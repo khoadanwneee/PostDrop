@@ -2,10 +2,10 @@
 
 PostDrop là prototype web app cho phép người dùng viết một lá thư hôm nay, niêm phong và nhận lại qua email hoặc thư vật lý vào một ngày trong tương lai.
 
-Ứng dụng được tách thành hai lớp trong cùng một project:
+Ứng dụng được tách thành hai thư mục riêng:
 
-- **Frontend:** Next.js 16 App Router + React 19, chạy mặc định tại `http://localhost:3000`.
-- **Backend:** NestJS 11 REST API, chạy mặc định tại `http://localhost:3001`.
+- **Frontend:** Next.js 16 App Router + React 19 trong thư mục `frontend/`, chạy mặc định tại `http://localhost:3000`.
+- **Backend tạm thời:** NestJS 11 REST API trong thư mục `backend/`, chạy mặc định tại `http://localhost:3001`.
 
 Next.js chuyển tiếp mọi request `/api/*` sang NestJS, nên frontend chỉ cần gọi API bằng đường dẫn tương đối như `/api/letters`.
 
@@ -13,28 +13,43 @@ Next.js chuyển tiếp mọi request `/api/*` sang NestJS, nên frontend chỉ 
 
 Yêu cầu Node.js 20.9 trở lên.
 
+Frontend và backend có package riêng. Chạy trong hai terminal:
+
 ```bash
+cd backend
+npm install
+npm run dev
+```
+
+```bash
+cd frontend
 npm install
 npm run dev
 ```
 
 Mở `http://localhost:3000`.
 
-```bash
-npm run build
-npm test
-npm run lint
-npm run start
-```
-
-Các lệnh `dev` và `start` chạy đồng thời frontend lẫn backend. Khi cần chạy riêng:
-
-```bash
-npm run dev:web
-npm run dev:api
-```
-
 Có thể đổi địa chỉ backend mà Next.js chuyển tiếp tới bằng biến `API_URL`; mặc định là `http://127.0.0.1:3001`.
+
+Ví dụ biến môi trường nằm trong từng thư mục:
+
+- `backend/.env.example`: biến cho NestJS backend.
+- `frontend/.env.example`: biến cho Next.js frontend.
+
+Chạy kiểm tra riêng theo từng thư mục:
+
+```bash
+cd frontend
+npm run lint
+npm test
+npm run build
+```
+
+```bash
+cd backend
+npm test
+npm run build
+```
 
 ## Luồng demo
 
@@ -62,5 +77,5 @@ Dữ liệu hiện được giữ trong bộ nhớ để prototype chạy ngay, 
 
 ## Tài liệu thiết kế
 
-- [Sitemap, user flow và wireframe](./docs/ux-blueprint.md)
-- [Design system](./docs/design-system.md)
+- [Sitemap, user flow và wireframe](./frontend/docs/ux-blueprint.md)
+- [Design system](./frontend/docs/design-system.md)
