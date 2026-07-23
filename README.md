@@ -5,7 +5,7 @@ PostDrop là prototype web app cho phép người dùng viết một lá thư h�
 Ứng dụng được tách thành hai thư mục riêng:
 
 - **Frontend:** Next.js 16 App Router + React 19 trong thư mục `frontend/`, chạy mặc định tại `http://localhost:3000`.
-- **Backend tạm thời:** NestJS 11 REST API trong thư mục `backend/`, chạy mặc định tại `http://localhost:3001`.
+- **Backend:** NestJS 11 + Supabase Auth/PostgreSQL trong thư mục `backend/`, chạy mặc định tại `http://localhost:3001`.
 
 Next.js chuyển tiếp mọi request `/api/*` sang NestJS, nên frontend chỉ cần gọi API bằng đường dẫn tương đối như `/api/letters`.
 
@@ -13,11 +13,17 @@ Next.js chuyển tiếp mọi request `/api/*` sang NestJS, nên frontend chỉ 
 
 Yêu cầu Node.js 20.9 trở lên.
 
-Frontend và backend có package riêng. Chạy trong hai terminal:
+Frontend và backend có package riêng. Backend cần một Supabase project hoặc
+local Supabase stack. Xem hướng dẫn đầy đủ tại
+[`backend/README.md`](./backend/README.md).
+
+Chạy local Supabase và backend:
 
 ```bash
 cd backend
 npm install
+npm run db:start
+npm run db:reset
 npm run dev
 ```
 
@@ -66,14 +72,20 @@ Form có validation trực tiếp, tự lưu nháp vào `localStorage`, hỗ tr�
 | Method | Endpoint | Mô tả |
 |---|---|---|
 | `GET` | `/api/health` | Kiểm tra dịch vụ |
-| `GET` | `/api/letters` | Danh sách thư |
+| `POST` | `/api/auth/register` | Đăng ký bằng Supabase Auth |
+| `POST` | `/api/auth/login` | Đăng nhập |
+| `GET` | `/api/auth/me` | Thông tin người dùng hiện tại |
+| `GET` | `/api/letters` | Danh sách thư của người dùng |
 | `GET` | `/api/letters/dashboard` | Thống kê và danh sách dashboard |
 | `GET` | `/api/letters/:id` | Chi tiết thư |
 | `POST` | `/api/letters` | Tạo bản nháp |
 | `PATCH` | `/api/letters/:id` | Cập nhật thư chưa niêm phong |
-| `POST` | `/api/letters/:id/seal` | Niêm phong và xóa nội dung khỏi response |
+| `DELETE` | `/api/letters/:id` | Xóa bản nháp |
+| `POST` | `/api/letters/:id/seal` | Mã hóa, niêm phong và lên lịch thư |
 
-Dữ liệu hiện được giữ trong bộ nhớ để prototype chạy ngay, không cần cấu hình database. Khi triển khai thật, `LettersService` là điểm thay thế bằng repository PostgreSQL/Prisma.
+Database schema, RLS policies, functions và seed data nằm trong thư mục
+`supabase/` để có thể dựng lại bằng Supabase CLI mà không cần tạo thủ công trên
+Dashboard.
 
 ## Tài liệu thiết kế
 

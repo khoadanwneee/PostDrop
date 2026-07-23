@@ -1,0 +1,3 @@
+-- PostDrop currently has no global reference data.
+-- User-owned rows are created through Supabase Auth and the NestJS API.
+-- Keep deterministic development seed statements in this file as the project grows.

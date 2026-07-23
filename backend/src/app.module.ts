@@ -1,9 +1,23 @@
 import { Module } from '@nestjs/common';
+import { ConfigModule } from '@nestjs/config';
 import { AppController } from './app.controller';
+import { AuthModule } from './auth/auth.module';
+import { validateEnvironment } from './config/environment';
+import { EncryptionModule } from './encryption/encryption.module';
 import { LettersModule } from './letters/letters.module';
+import { SupabaseModule } from './supabase/supabase.module';
 
 @Module({
-  imports: [LettersModule],
+  imports: [
+    ConfigModule.forRoot({
+      isGlobal: true,
+      validate: validateEnvironment,
+    }),
+    SupabaseModule,
+    EncryptionModule,
+    AuthModule,
+    LettersModule,
+  ],
   controllers: [AppController],
 })
 export class AppModule {}

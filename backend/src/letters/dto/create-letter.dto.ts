@@ -1,18 +1,28 @@
-import { IsDateString, IsEmail, IsIn, IsOptional, IsString, MinLength } from 'class-validator';
+import {
+  IsDateString,
+  IsEmail,
+  IsIn,
+  IsOptional,
+  IsString,
+  MaxLength,
+} from 'class-validator';
 
 export class CreateLetterDto {
+  @IsOptional()
   @IsString()
-  @MinLength(2)
+  @MaxLength(200)
   title: string;
 
+  @IsOptional()
   @IsString()
-  @MinLength(10)
+  @MaxLength(50000)
   content: string;
 
+  @IsOptional()
   @IsString()
-  @MinLength(2)
   recipientName: string;
 
+  @IsOptional()
   @IsEmail()
   recipientEmail: string;
 
@@ -24,12 +34,19 @@ export class CreateLetterDto {
   @IsString()
   address?: string;
 
+  @IsOptional()
   @IsDateString()
   deliveryDate: string;
 
+  @IsOptional()
+  @IsString()
+  deliveryTimezone?: string;
+
+  @IsOptional()
   @IsIn(['email', 'physical', 'hybrid'])
   deliveryMethod: 'email' | 'physical' | 'hybrid';
 
+  @IsOptional()
   @IsIn(['online', 'handwritten'])
   letterType: 'online' | 'handwritten';
 

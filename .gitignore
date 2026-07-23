@@ -2,5 +2,14 @@ node_modules/
 dist/
 .next/
 coverage/
+
 .env
+.env.*
+!.env.example
+
+supabase/.branches/
+supabase/.temp/
+
+*.tsbuildinfo
 *.log
+.DS_Store
