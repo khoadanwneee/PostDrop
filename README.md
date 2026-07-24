@@ -7,7 +7,7 @@ PostDrop là prototype web app cho phép người dùng viết một lá thư h�
 - **Frontend:** Next.js 16 App Router + React 19 trong thư mục `frontend/`, chạy mặc định tại `http://localhost:3000`.
 - **Backend:** NestJS 11 + Supabase Auth/PostgreSQL trong thư mục `backend/`, chạy mặc định tại `http://localhost:3001`.
 
-Next.js chuyển tiếp mọi request `/api/*` sang NestJS, nên frontend chỉ cần gọi API bằng đường dẫn tương đối như `/api/letters`.
+Frontend hiện gọi API bằng đường dẫn tương đối như `/api/letters`. Khi chạy hoặc deploy tích hợp, cần cấu hình reverse proxy để chuyển `/api/*` sang NestJS; `next.config.ts` hiện dùng static export và chưa tự cấu hình proxy này.
 
 ## Chạy dự án
 
@@ -89,5 +89,6 @@ Dashboard.
 
 ## Tài liệu thiết kế
 
+- [Kiến trúc hệ thống hiện tại](./docs/system-architecture.md)
 - [Sitemap, user flow và wireframe](./frontend/docs/ux-blueprint.md)
 - [Design system](./frontend/docs/design-system.md)
