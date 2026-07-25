@@ -1,10 +1,12 @@
 const stickerCategories = [
-  { id: 'cute', name: 'Bestie Vibes' },
-  { id: 'classic', name: 'Cổ điển' },
-  { id: 'all', name: 'Tất cả' }
+  { id: 'cute', name: 'Dễ thương' },
+  { id: 'y2k', name: 'Y2K' },
+  { id: 'study', name: 'Học tập' },
+  { id: 'scrapbook', name: 'Scrapbook' }
 ];
 
 const stickerList = [
+  // 32 Cute Stickers
   { id: 'cute_heart_pink', cat: 'cute', title: 'Trái tim hồng 3D', src: '/stickers/cute/cute_heart_pink.png' },
   { id: 'cute_good_vibes', cat: 'cute', title: 'Good vibes', src: '/stickers/cute/cute_good_vibes.png' },
   { id: 'cute_star_silver', cat: 'cute', title: 'Ngôi sao bạc 3D', src: '/stickers/cute/cute_star_silver.png' },
@@ -37,11 +39,110 @@ const stickerList = [
   { id: 'cute_chat_bubble', cat: 'cute', title: 'Khung tin nhắn tím', src: '/stickers/cute/cute_chat_bubble.png' },
   { id: 'cute_star_face', cat: 'cute', title: 'Ngôi sao mỉm cười', src: '/stickers/cute/cute_star_face.png' },
   { id: 'cute_heart_holographic', cat: 'cute', title: 'Trái tim cầu vồng', src: '/stickers/cute/cute_heart_holographic.png' },
-  { id: 'flower', cat: 'classic', title: 'Hoa khô', src: '/sticker_flower.png' },
-  { id: 'leaf', cat: 'classic', title: 'Lá xanh', src: '/sticker_leaf.png' },
-  { id: 'heart', cat: 'classic', title: 'Dấu tim cổ điển', src: '/sticker_heart.png' },
-  { id: 'star', cat: 'classic', title: 'Ngôi sao', src: '/sticker_star.png' },
-  { id: 'postmark', cat: 'classic', title: 'Con tem bưu điện', src: '/sticker_postmark.png' }
+
+  // 27 Y2K Stickers
+  { id: 'y2k_slay', cat: 'y2k', title: 'Chrome Slay 3D', src: '/stickers/y2k/y2k_slay.png' },
+  { id: 'y2k_phone_flip', cat: 'y2k', title: 'Điện thoại nắp gập ur so hot', src: '/stickers/y2k/y2k_phone_flip.png' },
+  { id: 'y2k_star_blue_3d', cat: 'y2k', title: 'Ngôi sao xanh 3D', src: '/stickers/y2k/y2k_star_blue_3d.png' },
+  { id: 'y2k_so_iconic', cat: 'y2k', title: 'So iconic', src: '/stickers/y2k/y2k_so_iconic.png' },
+  { id: 'y2k_heart_checkered', cat: 'y2k', title: 'Trái tim caro', src: '/stickers/y2k/y2k_heart_checkered.png' },
+  { id: 'y2k_star_pink', cat: 'y2k', title: 'Ngôi sao hồng', src: '/stickers/y2k/y2k_star_pink.png' },
+  { id: 'y2k_heart_holographic', cat: 'y2k', title: 'Trái tim Holographic 3D', src: '/stickers/y2k/y2k_heart_holographic.png' },
+  { id: 'y2k_headphones', cat: 'y2k', title: 'Tai nghe chụp tai Y2K', src: '/stickers/y2k/y2k_headphones.png' },
+  { id: 'y2k_flame_blue', cat: 'y2k', title: 'Ngọn lửa xanh', src: '/stickers/y2k/y2k_flame_blue.png' },
+  { id: 'y2k_main_character', cat: 'y2k', title: 'Main character', src: '/stickers/y2k/y2k_main_character.png' },
+  { id: 'y2k_smiley_pink', cat: 'y2k', title: 'Mặt cười hồng', src: '/stickers/y2k/y2k_smiley_pink.png' },
+  { id: 'y2k_camera_digital', cat: 'y2k', title: 'Máy ảnh kỹ thuật số Y2K', src: '/stickers/y2k/y2k_camera_digital.png' },
+  { id: 'y2k_xinh_iu', cat: 'y2k', title: 'Xinh iu Y2K', src: '/stickers/y2k/y2k_xinh_iu.png' },
+  { id: 'y2k_star_checkered', cat: 'y2k', title: 'Ngôi sao caro', src: '/stickers/y2k/y2k_star_checkered.png' },
+  { id: 'y2k_chill_di', cat: 'y2k', title: 'Chill đi blue speech', src: '/stickers/y2k/y2k_chill_di.png' },
+  { id: 'y2k_flame_smiley', cat: 'y2k', title: 'Ngọn lửa mặt cười hồng', src: '/stickers/y2k/y2k_flame_smiley.png' },
+  { id: 'y2k_ball_8', cat: 'y2k', title: 'Bóng bida số 8', src: '/stickers/y2k/y2k_ball_8.png' },
+  { id: 'y2k_loading', cat: 'y2k', title: 'Loading pixel tim', src: '/stickers/y2k/y2k_loading.png' },
+  { id: 'y2k_cursor', cat: 'y2k', title: 'Con trỏ chuột pixel', src: '/stickers/y2k/y2k_cursor.png' },
+  { id: 'y2k_butterfly_cyber', cat: 'y2k', title: 'Bướm Cyberpunk 3D', src: '/stickers/y2k/y2k_butterfly_cyber.png' },
+  { id: 'y2k_gamepad', cat: 'y2k', title: 'Tay cầm game PS2', src: '/stickers/y2k/y2k_gamepad.png' },
+  { id: 'y2k_badge_text', cat: 'y2k', title: 'Logo Y2K Chrome', src: '/stickers/y2k/y2k_badge_text.png' },
+  { id: 'y2k_lips_pink', cat: 'y2k', title: 'Đôi môi hồng sexy', src: '/stickers/y2k/y2k_lips_pink.png' },
+  { id: 'y2k_heart_blue_flame', cat: 'y2k', title: 'Trái tim ngọn lửa xanh', src: '/stickers/y2k/y2k_heart_blue_flame.png' },
+  { id: 'y2k_okurrr', cat: 'y2k', title: 'Okurrr', src: '/stickers/y2k/y2k_okurrr.png' },
+  { id: 'y2k_smiley_holographic', cat: 'y2k', title: 'Mặt cười Holographic', src: '/stickers/y2k/y2k_smiley_holographic.png' },
+  { id: 'y2k_sneaker_platform', cat: 'y2k', title: 'Giày sneaker Y2K lửa hồng', src: '/stickers/y2k/y2k_sneaker_platform.png' },
+
+  // 40 Study Stickers
+  { id: 'study_you_got_this', cat: 'study', title: 'You got this cloud', src: '/stickers/study/study_you_got_this.png' },
+  { id: 'study_olive_star', cat: 'study', title: 'Ngôi sao xanh olive', src: '/stickers/study/study_olive_star.png' },
+  { id: 'study_star_face', cat: 'study', title: 'Ngôi sao mỉm cười', src: '/stickers/study/study_star_face.png' },
+  { id: 'study_study_mode', cat: 'study', title: 'Study mode badge', src: '/stickers/study/study_study_mode.png' },
+  { id: 'study_coffee_first', cat: 'study', title: 'Cốc cà phê Coffee First', src: '/stickers/study/study_coffee_first.png' },
+  { id: 'study_matcha_love', cat: 'study', title: 'Ly Matcha Latte', src: '/stickers/study/study_matcha_love.png' },
+  { id: 'study_tote_bag', cat: 'study', title: 'Túi vải Tote Bookish Things', src: '/stickers/study/study_tote_bag.png' },
+  { id: 'study_heart_pink', cat: 'study', title: 'Trái tim hồng mỉm cười', src: '/stickers/study/study_heart_pink.png' },
+  { id: 'study_nhan_cau_ne', cat: 'study', title: 'Nhắn cậu nè speech bubble', src: '/stickers/study/study_nhan_cau_ne.png' },
+  { id: 'study_leaf_branch', cat: 'study', title: 'Cành lá olive', src: '/stickers/study/study_leaf_branch.png' },
+  { id: 'study_notebook_bear', cat: 'study', title: 'Sổ gáy xoắn gấu nhỏ', src: '/stickers/study/study_notebook_bear.png' },
+  { id: 'study_pencil', cat: 'study', title: 'Bút chì gỗ', src: '/stickers/study/study_pencil.png' },
+  { id: 'study_focus', cat: 'study', title: 'Focus badge', src: '/stickers/study/study_focus.png' },
+  { id: 'study_heart_blue', cat: 'study', title: 'Trái tim xanh pastel', src: '/stickers/study/study_heart_blue.png' },
+  { id: 'study_smiley_yellow', cat: 'study', title: 'Mặt cười vàng nhỏ', src: '/stickers/study/study_smiley_yellow.png' },
+  { id: 'study_book_stack', cat: 'study', title: 'Chồng sách cổ điển & kính cận', src: '/stickers/study/study_book_stack.png' },
+  { id: 'study_cat_sleeping', cat: 'study', title: 'Mèo con nằm ngủ', src: '/stickers/study/study_cat_sleeping.png' },
+  { id: 'study_binder_clip', cat: 'study', title: 'Kẹp giấy binder clip', src: '/stickers/study/study_binder_clip.png' },
+  { id: 'study_paper_plane', cat: 'study', title: 'Máy bay giấy bay', src: '/stickers/study/study_paper_plane.png' },
+  { id: 'study_laptop_cozy', cat: 'study', title: 'Laptop nắp gập cozy', src: '/stickers/study/study_laptop_cozy.png' },
+  { id: 'study_headphones_beige', cat: 'study', title: 'Tai nghe chụp tay kem beige', src: '/stickers/study/study_headphones_beige.png' },
+  { id: 'study_camera_instant', cat: 'study', title: 'Máy ảnh lấy liền & ảnh in', src: '/stickers/study/study_camera_instant.png' },
+  { id: 'study_polaroid_flowers', cat: 'study', title: 'Khung ảnh Polaroid hoa tulip', src: '/stickers/study/study_polaroid_flowers.png' },
+  { id: 'study_quote_note', cat: 'study', title: 'Giấy ghi chú câu nói động lực', src: '/stickers/study/study_quote_note.png' },
+  { id: 'study_good_day', cat: 'study', title: 'Good day badge', src: '/stickers/study/study_good_day.png' },
+  { id: 'study_to_do_list', cat: 'study', title: 'Bảng To-do list học tập', src: '/stickers/study/study_to_do_list.png' },
+  { id: 'study_flower_yellow', cat: 'study', title: 'Cành hoa vàng nhỏ', src: '/stickers/study/study_flower_yellow.png' },
+  { id: 'study_heart_plaid', cat: 'study', title: 'Trái tim kẻ caro', src: '/stickers/study/study_heart_plaid.png' },
+  { id: 'study_take_a_break', cat: 'study', title: 'Take a break speech bubble', src: '/stickers/study/study_take_a_break.png' },
+  { id: 'study_its_ok_to_rest', cat: 'study', title: "It's ok to rest cloud", src: '/stickers/study/study_its_ok_to_rest.png' },
+  { id: 'study_bear_pouch', cat: 'study', title: 'Linh vật gấu trắng dễ thương', src: '/stickers/study/study_bear_pouch.png' },
+  { id: 'study_mug_coffee', cat: 'study', title: 'Cốc gốm sứ cà phê nóng', src: '/stickers/study/study_mug_coffee.png' },
+  { id: 'study_paperclips', cat: 'study', title: 'Bộ 3 kẹp ghim giấy pastel', src: '/stickers/study/study_paperclips.png' },
+  { id: 'study_plant_potted', cat: 'study', title: 'Chậu cây cảnh để bàn', src: '/stickers/study/study_plant_potted.png' },
+  { id: 'study_tape_grid', cat: 'study', title: 'Washi tape kẻ ô beige', src: '/stickers/study/study_tape_grid.png' },
+  { id: 'study_tape_daisy', cat: 'study', title: 'Washi tape hoa cúc olive', src: '/stickers/study/study_tape_daisy.png' },
+  { id: 'study_tape_polkadot', cat: 'study', title: 'Washi tape chấm bi xanh', src: '/stickers/study/study_tape_polkadot.png' },
+  { id: 'study_tape_gingham', cat: 'study', title: 'Washi tape caro vàng', src: '/stickers/study/study_tape_gingham.png' },
+  { id: 'study_tape_hearts', cat: 'study', title: 'Washi tape tim cam đất', src: '/stickers/study/study_tape_hearts.png' },
+  { id: 'study_tape_floral', cat: 'study', title: 'Washi tape hoạ tiết hoa nhỏ', src: '/stickers/study/study_tape_floral.png' },
+
+  // 31 Scrapbook Stickers
+  { id: 'scrapbook_little_moments', cat: 'scrapbook', title: 'Little moments label', src: '/stickers/scrapbook/scrapbook_little_moments.png' },
+  { id: 'scrapbook_dried_wildflowers', cat: 'scrapbook', title: 'Hoa dại khô dán băng keo', src: '/stickers/scrapbook/scrapbook_dried_wildflowers.png' },
+  { id: 'scrapbook_stamp_mountain', cat: 'scrapbook', title: 'Tem bưu chính núi rừng 20¢', src: '/stickers/scrapbook/scrapbook_stamp_mountain.png' },
+  { id: 'scrapbook_pink_flower', cat: 'scrapbook', title: 'Hoa cúc hồng mộc mạc', src: '/stickers/scrapbook/scrapbook_pink_flower.png' },
+  { id: 'scrapbook_film_strip', cat: 'scrapbook', title: 'Cuộn phim ảnh Vintage 3 ô', src: '/stickers/scrapbook/scrapbook_film_strip.png' },
+  { id: 'scrapbook_mushroom', cat: 'scrapbook', title: 'Nấm rừng minh hoạ cổ điển', src: '/stickers/scrapbook/scrapbook_mushroom.png' },
+  { id: 'scrapbook_be_kind', cat: 'scrapbook', title: 'Trái tim Be kind xanh olive', src: '/stickers/scrapbook/scrapbook_be_kind.png' },
+  { id: 'scrapbook_torn_note_time', cat: 'scrapbook', title: 'Mảnh giấy xé it\'s okay to take your time', src: '/stickers/scrapbook/scrapbook_torn_note_time.png' },
+  { id: 'scrapbook_cloud_vintage', cat: 'scrapbook', title: 'Đám mây minh hoạ cổ điển', src: '/stickers/scrapbook/scrapbook_cloud_vintage.png' },
+  { id: 'scrapbook_dear_diary', cat: 'scrapbook', title: 'Nhãn Dear diary', src: '/stickers/scrapbook/scrapbook_dear_diary.png' },
+  { id: 'scrapbook_post_card', cat: 'scrapbook', title: 'Bưu thiếp xanh Wish you were here', src: '/stickers/scrapbook/scrapbook_post_card.png' },
+  { id: 'scrapbook_camera_vintage', cat: 'scrapbook', title: 'Máy ảnh cơ 35mm Vintage', src: '/stickers/scrapbook/scrapbook_camera_vintage.png' },
+  { id: 'scrapbook_sun_face', cat: 'scrapbook', title: 'Mặt trời thần thoại cổ đại', src: '/stickers/scrapbook/scrapbook_sun_face.png' },
+  { id: 'scrapbook_olive_leaves', cat: 'scrapbook', title: 'Cành lá xanh mộc mạc', src: '/stickers/scrapbook/scrapbook_olive_leaves.png' },
+  { id: 'scrapbook_ticket_pink', cat: 'scrapbook', title: 'Vé hồng Good things are coming', src: '/stickers/scrapbook/scrapbook_ticket_pink.png' },
+  { id: 'scrapbook_ticket_admit_one', cat: 'scrapbook', title: 'Vé xi nê Admit One', src: '/stickers/scrapbook/scrapbook_ticket_admit_one.png' },
+  { id: 'scrapbook_heart_pink_sketch', cat: 'scrapbook', title: 'Trái tim nét vẽ phác thảo', src: '/stickers/scrapbook/scrapbook_heart_pink_sketch.png' },
+  { id: 'scrapbook_see_u_soon', cat: 'scrapbook', title: 'Badge See u soon xanh olive', src: '/stickers/scrapbook/scrapbook_see_u_soon.png' },
+  { id: 'scrapbook_crescent_moon_face', cat: 'scrapbook', title: 'Trăng khuyết ngủ ngoan & ngôi sao', src: '/stickers/scrapbook/scrapbook_crescent_moon_face.png' },
+  { id: 'scrapbook_gingham_tape', cat: 'scrapbook', title: 'Băng keo washi kẻ ô nâu', src: '/stickers/scrapbook/scrapbook_gingham_tape.png' },
+  { id: 'scrapbook_soft_life', cat: 'scrapbook', title: 'Trái tim Soft life xanh xám', src: '/stickers/scrapbook/scrapbook_soft_life.png' },
+  { id: 'scrapbook_pink_wildflowers', cat: 'scrapbook', title: 'Cành hoa dại hồng dán băng keo', src: '/stickers/scrapbook/scrapbook_pink_wildflowers.png' },
+  { id: 'scrapbook_map_vintage', cat: 'scrapbook', title: 'Bản đồ cổ Let\'s get lost', src: '/stickers/scrapbook/scrapbook_map_vintage.png' },
+  { id: 'scrapbook_healing_note', cat: 'scrapbook', title: 'Mảnh giấy Healing chữa lành', src: '/stickers/scrapbook/scrapbook_healing_note.png' },
+  { id: 'scrapbook_today_checklist', cat: 'scrapbook', title: 'Checklist Today coffee & sunshine', src: '/stickers/scrapbook/scrapbook_today_checklist.png' },
+  { id: 'scrapbook_daisy_bouquet', cat: 'scrapbook', title: 'Bó hoa cúc hoang mộc mạc', src: '/stickers/scrapbook/scrapbook_daisy_bouquet.png' },
+  { id: 'scrapbook_take_care', cat: 'scrapbook', title: 'Badge Take care of yourself', src: '/stickers/scrapbook/scrapbook_take_care.png' },
+  { id: 'scrapbook_ticket_collect', cat: 'scrapbook', title: 'Vé Collect beautiful things', src: '/stickers/scrapbook/scrapbook_ticket_collect.png' },
+  { id: 'scrapbook_grow_through', cat: 'scrapbook', title: 'Tranh in botanical Grow through what you go through', src: '/stickers/scrapbook/scrapbook_grow_through.png' },
+  { id: 'scrapbook_world_be_kind', cat: 'scrapbook', title: 'Giấy note In a world where you can be anything, be kind', src: '/stickers/scrapbook/scrapbook_world_be_kind.png' },
+  { id: 'scrapbook_keep_going', cat: 'scrapbook', title: 'Huy hiệu phong cảnh Keep going', src: '/stickers/scrapbook/scrapbook_keep_going.png' }
 ];
 
 let activeStickerCategory = 'cute';
@@ -50,6 +151,9 @@ function getStickerSrc(type) {
   const item = stickerList.find(s => s.id === type);
   if (item) return item.src;
   if (type.startsWith('cute_')) return `/stickers/cute/${type}.png`;
+  if (type.startsWith('y2k_')) return `/stickers/y2k/${type}.png`;
+  if (type.startsWith('study_')) return `/stickers/study/${type}.png`;
+  if (type.startsWith('scrapbook_')) return `/stickers/scrapbook/${type}.png`;
   if (type.startsWith('classic_')) return `/stickers/classic/${type}.png`;
   return `/sticker_${type}.png`;
 }
@@ -62,7 +166,7 @@ function renderStickerLibrary() {
   const tabsHtml = stickerCategories.map(cat => {
     const count = cat.id === 'all' ? stickerList.length : stickerList.filter(s => s.cat === cat.id).length;
     const activeClass = activeStickerCategory === cat.id ? 'active' : '';
-    return `<button type="button" class="cat-tab ${activeClass}" data-cat="${cat.id}">${cat.name} (${count})</button>`;
+    return `<button type="button" class="cat-tab ${activeClass}" data-cat="${cat.id}">${cat.name}</button>`;
   }).join('');
 
   const gridHtml = filtered.map(s => `
@@ -146,6 +250,26 @@ const envelopeOptions = [
 let draft = { ...defaultDraft, ...JSON.parse(localStorage.getItem('postdrop-draft') || '{}') };
 let currentLetter = null;
 let saveTimer;
+const DECORATION_BASE_SIZE = 64;
+const DECORATION_MIN_SCALE = 0.4;
+const DECORATION_MAX_SCALE = 3;
+const DECORATION_SCALE_STEP = 0.15;
+const DECORATION_ROTATION_STEP = 15;
+let selectedDecorationId = null;
+
+function clampDecorationScale(value) {
+  return Math.min(DECORATION_MAX_SCALE, Math.max(DECORATION_MIN_SCALE, value));
+}
+
+function roundedDecorationScale(value) {
+  return Math.round(clampDecorationScale(value) * 100) / 100;
+}
+
+function normalizeDecorationRotation(value) {
+  const normalized = ((Number(value) || 0) % 360 + 360) % 360;
+  const rounded = Math.round(normalized * 100) / 100;
+  return rounded === 360 ? 0 : rounded;
+}
 
 function persistDraft() {
   const state = document.querySelector('.save-state');
@@ -251,10 +375,9 @@ function renderDesignStep() {
     <div class="field"><label>Kiểu chữ trong thư</label><div class="segmented">${segment('font','serif','Editorial')}${segment('font','modern','Hiện đại')}${segment('font','hand','Viết tay')}</div></div>
     <div class="field"><label>Màu phong bì · 9 lựa chọn</label><div class="swatches design-swatches">${renderSwatches('envelope', envelopeOptions)}</div></div>
     <div class="field">
-      <label>Trang trí lá thư (Kéo thả hoặc click chọn)</label>
+      <label>Sticker</label>
       <div class="sticker-library-wrapper">${renderStickerLibrary()}</div>
     </div>
-    <div class="info-note">${icon('info')}<span>Bản in thực tế có thể chênh lệch màu nhẹ tùy chất liệu giấy.</span></div>
   </section><aside class="preview-panel">${letterPreview()}</aside></div>${builderActions(3)}`;
 }
 
@@ -277,12 +400,33 @@ function letterPreview() {
   const content = (draft.content || 'Những dòng chữ của bạn sẽ xuất hiện ở đây, như một lời nhắn đang chờ thời gian mang đi…').normalize('NFC');
   const decos = (draft.decorations || []).map((deco) => {
     const type = deco.type === 'sparkles' ? 'postmark' : deco.type;
-    return `<div class="placed-decoration sticker-${type}" style="left: ${deco.x}%; top: ${deco.y}%;" draggable="true" data-id="${deco.id}">
+    const scale = roundedDecorationScale(deco.scale || 1);
+    const rotation = normalizeDecorationRotation(deco.rotation || 0);
+    const size = DECORATION_BASE_SIZE * scale;
+    const selected = deco.id === selectedDecorationId;
+    return `<div class="placed-decoration sticker-${type}${selected ? ' is-selected' : ''}" style="left: ${deco.x}%; top: ${deco.y}%; width: ${size}px; height: ${size}px; --deco-rotation: ${rotation}deg; --deco-counter-rotation: ${-rotation}deg;" draggable="true" tabindex="0" role="group" aria-label="Sticker ${escapeHtml(type)}, ${Math.round(scale * 100)}%, xoay ${rotation} độ" data-id="${deco.id}">
       <img src="${getStickerSrc(type)}" alt="${type}" class="placed-sticker-img" />
-      <button type="button" class="remove-deco" data-remove-id="${deco.id}">&times;</button>
+      <div class="sticker-controls" role="toolbar" aria-label="Điều chỉnh kích thước sticker">
+        <button type="button" class="scale-btn scale-down" data-scale="down" data-scale-id="${deco.id}" aria-label="Thu nhỏ sticker" title="Thu nhỏ">−</button>
+        <output class="scale-value" aria-live="polite">${Math.round(scale * 100)}%</output>
+        <button type="button" class="scale-btn scale-up" data-scale="up" data-scale-id="${deco.id}" aria-label="Phóng to sticker" title="Phóng to">+</button>
+        <button type="button" class="remove-deco" data-remove-id="${deco.id}" aria-label="Xóa sticker" title="Xóa">&times;</button>
+      </div>
+      ${['nw', 'ne', 'sw', 'se'].map((corner) => `<button type="button" class="resize-handle resize-handle-${corner}" data-resize-id="${deco.id}" data-resize-corner="${corner}" aria-label="Thay đổi kích thước sticker từ góc ${corner}" title="Kéo để phóng to / thu nhỏ"></button>`).join('')}
+      <button type="button" class="rotate-handle" data-rotate-handle-id="${deco.id}" aria-label="Kéo để xoay sticker" title="Kéo để xoay · Giữ Shift để bắt góc 15 độ"><span aria-hidden="true">↻</span></button>
     </div>`;
   }).join('');
-  return `<div class="letter-preview paper-${draft.paper} font-${draft.font}" style="--envelope-color:${envelopeColor()}"><small>GỬI ĐẾN TƯƠNG LAI</small><h3>${escapeHtml((draft.title || 'Lá thư của tôi').normalize('NFC'))}</h3><div class="preview-body">${escapeHtml(content)}</div><div class="signature">POSTDROP · NIÊM PHONG VỚI SỰ RIÊNG TƯ</div><div class="preview-envelope-chip"><span aria-hidden="true"></span>Phong bì ${escapeHtml(labelize(draft.envelope))}</div>${decos}</div>`;
+  return `<div class="preview-stage-wrap">
+    <div class="preview-stage-head">
+      <span>Khung xem trước</span>
+      <small>Kéo thả, phóng to / thu nhỏ và xoay sticker trực tiếp trên mặt giấy</small>
+    </div>
+    <div class="letter-preview paper-${draft.paper} font-${draft.font}">
+      <h3>${escapeHtml((draft.title || 'Lá thư của tôi').normalize('NFC'))}</h3>
+      <div class="preview-body">${escapeHtml(content)}</div>
+      ${decos}
+    </div>
+  </div>`;
 }
 function summaryRow(label, value) { return `<div class="summary-row"><span>${label}</span><strong>${escapeHtml(value)}</strong></div>`; }
 function labelize(value) { return ({
@@ -344,9 +488,12 @@ function bindBuilder(step) {
             id: 'deco-' + Date.now(),
             type: item.dataset.type,
             x: 50,
-            y: 50
+            y: 50,
+            scale: 1,
+            rotation: 0
           };
           draft.decorations.push(newDeco);
+          selectedDecorationId = newDeco.id;
           persistDraft();
           updatePreview();
         });
@@ -382,9 +529,12 @@ function bindBuilder(step) {
             id: 'deco-' + Date.now(),
             type,
             x: clampedX,
-            y: clampedY
+            y: clampedY,
+            scale: 1,
+            rotation: 0
           };
           draft.decorations.push(newDeco);
+          selectedDecorationId = newDeco.id;
         } else if (data.startsWith('move:')) {
           const id = data.split(':')[1];
           const deco = draft.decorations.find((d) => d.id === id);
@@ -398,13 +548,42 @@ function bindBuilder(step) {
       });
 
       previewPanel.addEventListener('click', (e) => {
+        const scaleBtn = e.target.closest('[data-scale-id]');
+        if (scaleBtn) {
+          e.stopPropagation();
+          const id = scaleBtn.dataset.scaleId;
+          const action = scaleBtn.dataset.scale;
+          const deco = (draft.decorations || []).find(d => d.id === id);
+          if (deco) {
+            const direction = action === 'up' ? 1 : -1;
+            deco.scale = roundedDecorationScale((deco.scale || 1) + (direction * DECORATION_SCALE_STEP));
+            selectedDecorationId = id;
+            persistDraft();
+            updatePreview();
+          }
+          return;
+        }
+
         const removeBtn = e.target.closest('.remove-deco');
         if (removeBtn) {
           e.stopPropagation();
           const id = removeBtn.dataset.removeId;
           draft.decorations = (draft.decorations || []).filter((d) => d.id !== id);
+          if (selectedDecorationId === id) selectedDecorationId = null;
           persistDraft();
           updatePreview();
+          return;
+        }
+
+        const decoration = e.target.closest('.placed-decoration');
+        if (decoration) {
+          selectedDecorationId = decoration.dataset.id;
+          previewPanel.querySelectorAll('.placed-decoration').forEach((item) => {
+            item.classList.toggle('is-selected', item === decoration);
+          });
+        } else if (e.target.closest('.letter-preview')) {
+          selectedDecorationId = null;
+          previewPanel.querySelectorAll('.placed-decoration').forEach((item) => item.classList.remove('is-selected'));
         }
       });
     }
@@ -423,9 +602,181 @@ function updatePreview() {
 
 function bindPlacedDecorationsDrag() {
   document.querySelectorAll('.letter-preview .placed-decoration').forEach((decoEl) => {
+    decoEl.addEventListener('pointerdown', (e) => {
+      if (e.target.closest('.sticker-controls, .resize-handle, .rotate-handle')) return;
+      selectedDecorationId = decoEl.dataset.id;
+      document.querySelectorAll('.letter-preview .placed-decoration').forEach((item) => {
+        item.classList.toggle('is-selected', item === decoEl);
+      });
+    });
+
     decoEl.addEventListener('dragstart', (e) => {
+      selectedDecorationId = decoEl.dataset.id;
       e.dataTransfer.setData('text/plain', 'move:' + decoEl.dataset.id);
     });
+
+    decoEl.addEventListener('wheel', (e) => {
+      if (!e.ctrlKey && !e.metaKey) return;
+      e.preventDefault();
+      const id = decoEl.dataset.id;
+      const deco = (draft.decorations || []).find(d => d.id === id);
+      if (deco) {
+        const direction = e.deltaY < 0 ? 1 : -1;
+        deco.scale = roundedDecorationScale((deco.scale || 1) + (direction * 0.1));
+        selectedDecorationId = id;
+        persistDraft();
+        updatePreview();
+      }
+    }, { passive: false });
+
+    decoEl.addEventListener('keydown', (e) => {
+      const id = decoEl.dataset.id;
+      const deco = (draft.decorations || []).find(d => d.id === id);
+      if (!deco) return;
+      if (e.key === '+' || e.key === '=') {
+        e.preventDefault();
+        deco.scale = roundedDecorationScale((deco.scale || 1) + DECORATION_SCALE_STEP);
+      } else if (e.key === '-' || e.key === '_') {
+        e.preventDefault();
+        deco.scale = roundedDecorationScale((deco.scale || 1) - DECORATION_SCALE_STEP);
+      } else if (e.key.toLowerCase() === 'r') {
+        e.preventDefault();
+        const direction = e.shiftKey ? -1 : 1;
+        deco.rotation = normalizeDecorationRotation((deco.rotation || 0) + (direction * DECORATION_ROTATION_STEP));
+      } else if (e.key === 'Delete' || e.key === 'Backspace') {
+        e.preventDefault();
+        draft.decorations = (draft.decorations || []).filter((item) => item.id !== id);
+        selectedDecorationId = null;
+      } else if (e.key === 'Escape') {
+        selectedDecorationId = null;
+      } else {
+        return;
+      }
+      persistDraft();
+      updatePreview();
+    });
+
+    decoEl.querySelectorAll('.resize-handle').forEach((handle) => {
+      handle.addEventListener('pointerdown', (e) => {
+        e.stopPropagation();
+        e.preventDefault();
+        const id = handle.dataset.resizeId;
+        const deco = (draft.decorations || []).find(d => d.id === id);
+        if (!deco) return;
+        const preview = decoEl.closest('.letter-preview');
+        if (!preview) return;
+
+        selectedDecorationId = id;
+        decoEl.classList.add('is-selected', 'is-resizing');
+        decoEl.setAttribute('draggable', 'false');
+
+        const previewRect = preview.getBoundingClientRect();
+        const startSize = DECORATION_BASE_SIZE * roundedDecorationScale(deco.scale || 1);
+        const startCenterX = previewRect.left + ((deco.x || 0) / 100) * previewRect.width;
+        const startCenterY = previewRect.top + ((deco.y || 0) / 100) * previewRect.height;
+        const corner = handle.dataset.resizeCorner;
+        const cornerX = corner.includes('w') ? -1 : 1;
+        const cornerY = corner.includes('n') ? -1 : 1;
+        const rotationRadians = normalizeDecorationRotation(deco.rotation || 0) * Math.PI / 180;
+        const cosine = Math.cos(rotationRadians);
+        const sine = Math.sin(rotationRadians);
+        const localXAxisX = cosine;
+        const localXAxisY = sine;
+        const localYAxisX = -sine;
+        const localYAxisY = cosine;
+        const diagonalX = (cornerX * localXAxisX) + (cornerY * localYAxisX);
+        const diagonalY = (cornerX * localXAxisY) + (cornerY * localYAxisY);
+        const anchorX = startCenterX - (diagonalX * startSize / 2);
+        const anchorY = startCenterY - (diagonalY * startSize / 2);
+
+        const onPointerMove = (moveEvt) => {
+          const vectorX = moveEvt.clientX - anchorX;
+          const vectorY = moveEvt.clientY - anchorY;
+          const requestedSize = ((vectorX * diagonalX) + (vectorY * diagonalY)) / 2;
+          const minSize = DECORATION_BASE_SIZE * DECORATION_MIN_SCALE;
+          const maxSize = DECORATION_BASE_SIZE * DECORATION_MAX_SCALE;
+          const newSize = Math.min(maxSize, Math.max(minSize, requestedSize));
+          const halfSize = newSize / 2;
+          const requestedCenterX = anchorX + (diagonalX * halfSize);
+          const requestedCenterY = anchorY + (diagonalY * halfSize);
+          const rotatedExtent = halfSize * (Math.abs(cosine) + Math.abs(sine));
+          const centerX = Math.min(previewRect.right - rotatedExtent, Math.max(previewRect.left + rotatedExtent, requestedCenterX));
+          const centerY = Math.min(previewRect.bottom - rotatedExtent, Math.max(previewRect.top + rotatedExtent, requestedCenterY));
+
+          deco.scale = roundedDecorationScale(newSize / DECORATION_BASE_SIZE);
+          deco.x = Math.round(((centerX - previewRect.left) / previewRect.width) * 10000) / 100;
+          deco.y = Math.round(((centerY - previewRect.top) / previewRect.height) * 10000) / 100;
+
+          decoEl.style.width = `${DECORATION_BASE_SIZE * deco.scale}px`;
+          decoEl.style.height = `${DECORATION_BASE_SIZE * deco.scale}px`;
+          decoEl.style.left = `${deco.x}%`;
+          decoEl.style.top = `${deco.y}%`;
+          decoEl.querySelector('.scale-value').textContent = `${Math.round(deco.scale * 100)}%`;
+          decoEl.setAttribute('aria-label', `Sticker ${deco.type}, ${Math.round(deco.scale * 100)}%, xoay ${normalizeDecorationRotation(deco.rotation || 0)} do`);
+        };
+
+        const onPointerUp = () => {
+          window.removeEventListener('pointermove', onPointerMove);
+          window.removeEventListener('pointerup', onPointerUp);
+          window.removeEventListener('pointercancel', onPointerUp);
+          decoEl.classList.remove('is-resizing');
+          decoEl.setAttribute('draggable', 'true');
+          persistDraft();
+          updatePreview();
+        };
+
+        window.addEventListener('pointermove', onPointerMove);
+        window.addEventListener('pointerup', onPointerUp);
+        window.addEventListener('pointercancel', onPointerUp);
+      });
+    });
+
+    const rotateHandle = decoEl.querySelector('.rotate-handle');
+    if (rotateHandle) {
+      rotateHandle.addEventListener('pointerdown', (e) => {
+        e.stopPropagation();
+        e.preventDefault();
+        const id = rotateHandle.dataset.rotateHandleId;
+        const deco = (draft.decorations || []).find((item) => item.id === id);
+        if (!deco) return;
+        const preview = decoEl.closest('.letter-preview');
+        if (!preview) return;
+        const previewRect = preview.getBoundingClientRect();
+        const centerX = previewRect.left + ((deco.x || 0) / 100) * previewRect.width;
+        const centerY = previewRect.top + ((deco.y || 0) / 100) * previewRect.height;
+        const startPointerAngle = Math.atan2(e.clientY - centerY, e.clientX - centerX);
+        const startRotation = normalizeDecorationRotation(deco.rotation || 0);
+
+        selectedDecorationId = id;
+        decoEl.classList.add('is-selected', 'is-rotating');
+        decoEl.setAttribute('draggable', 'false');
+
+        const onPointerMove = (moveEvt) => {
+          const currentAngle = Math.atan2(moveEvt.clientY - centerY, moveEvt.clientX - centerX);
+          const deltaDegrees = (currentAngle - startPointerAngle) * 180 / Math.PI;
+          const rawRotation = startRotation + deltaDegrees;
+          const snappedRotation = moveEvt.shiftKey ? Math.round(rawRotation / DECORATION_ROTATION_STEP) * DECORATION_ROTATION_STEP : rawRotation;
+          deco.rotation = normalizeDecorationRotation(snappedRotation);
+          decoEl.style.setProperty('--deco-rotation', `${deco.rotation}deg`);
+          decoEl.style.setProperty('--deco-counter-rotation', `${-deco.rotation}deg`);
+          decoEl.setAttribute('aria-label', `Sticker ${deco.type}, ${Math.round((deco.scale || 1) * 100)}%, xoay ${deco.rotation} do`);
+        };
+
+        const onPointerUp = () => {
+          window.removeEventListener('pointermove', onPointerMove);
+          window.removeEventListener('pointerup', onPointerUp);
+          window.removeEventListener('pointercancel', onPointerUp);
+          decoEl.classList.remove('is-rotating');
+          decoEl.setAttribute('draggable', 'true');
+          persistDraft();
+          updatePreview();
+        };
+
+        window.addEventListener('pointermove', onPointerMove);
+        window.addEventListener('pointerup', onPointerUp);
+        window.addEventListener('pointercancel', onPointerUp);
+      });
+    }
   });
 }
 
