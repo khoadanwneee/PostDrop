@@ -1,3 +1,82 @@
+const stickerCategories = [
+  { id: 'cute', name: 'Bestie Vibes' },
+  { id: 'classic', name: 'Cổ điển' },
+  { id: 'all', name: 'Tất cả' }
+];
+
+const stickerList = [
+  { id: 'cute_heart_pink', cat: 'cute', title: 'Trái tim hồng 3D', src: '/stickers/cute/cute_heart_pink.png' },
+  { id: 'cute_good_vibes', cat: 'cute', title: 'Good vibes', src: '/stickers/cute/cute_good_vibes.png' },
+  { id: 'cute_star_silver', cat: 'cute', title: 'Ngôi sao bạc 3D', src: '/stickers/cute/cute_star_silver.png' },
+  { id: 'cute_cloud_blue', cat: 'cute', title: 'Đám mây mỉm cười', src: '/stickers/cute/cute_cloud_blue.png' },
+  { id: 'cute_bow_pink', cat: 'cute', title: 'Nơ caro hồng', src: '/stickers/cute/cute_bow_pink.png' },
+  { id: 'cute_cherries', cat: 'cute', title: 'Trái anh đào', src: '/stickers/cute/cute_cherries.png' },
+  { id: 'cute_luv_u', cat: 'cute', title: 'Luv u', src: '/stickers/cute/cute_luv_u.png' },
+  { id: 'cute_smiley_yellow', cat: 'cute', title: 'Mặt cười vàng', src: '/stickers/cute/cute_smiley_yellow.png' },
+  { id: 'cute_bestie', cat: 'cute', title: 'Bestie', src: '/stickers/cute/cute_bestie.png' },
+  { id: 'cute_star_blue', cat: 'cute', title: 'Ngôi sao xanh', src: '/stickers/cute/cute_star_blue.png' },
+  { id: 'cute_flower_pink', cat: 'cute', title: 'Hoa hồng nhỏ', src: '/stickers/cute/cute_flower_pink.png' },
+  { id: 'cute_nhan_cau_ne', cat: 'cute', title: 'Nhắn cậu nè', src: '/stickers/cute/cute_nhan_cau_ne.png' },
+  { id: 'cute_music_note', cat: 'cute', title: 'Nốt nhạc mơ mộng', src: '/stickers/cute/cute_music_note.png' },
+  { id: 'cute_you_got_this', cat: 'cute', title: 'You got this', src: '/stickers/cute/cute_you_got_this.png' },
+  { id: 'cute_chill_di', cat: 'cute', title: 'Chill đi', src: '/stickers/cute/cute_chill_di.png' },
+  { id: 'cute_crescent_moon', cat: 'cute', title: 'Trăng khuyết ngủ ngoan', src: '/stickers/cute/cute_crescent_moon.png' },
+  { id: 'cute_butterfly_purple', cat: 'cute', title: 'Bướm tím', src: '/stickers/cute/cute_butterfly_purple.png' },
+  { id: 'cute_tape_pink', cat: 'cute', title: 'Washi tape tim hồng', src: '/stickers/cute/cute_tape_pink.png' },
+  { id: 'cute_tape_checkered', cat: 'cute', title: 'Washi tape caro', src: '/stickers/cute/cute_tape_checkered.png' },
+  { id: 'cute_tape_daisy', cat: 'cute', title: 'Washi tape hoa cúc', src: '/stickers/cute/cute_tape_daisy.png' },
+  { id: 'cute_keo_ngot', cat: 'cute', title: 'Kẹo ngọt', src: '/stickers/cute/cute_keo_ngot.png' },
+  { id: 'cute_coffee_cup', cat: 'cute', title: 'Ly cà phê tim', src: '/stickers/cute/cute_coffee_cup.png' },
+  { id: 'cute_envelope_love', cat: 'cute', title: 'Phong bì tình yêu', src: '/stickers/cute/cute_envelope_love.png' },
+  { id: 'cute_laptop_pink', cat: 'cute', title: 'Laptop tim hồng', src: '/stickers/cute/cute_laptop_pink.png' },
+  { id: 'cute_camera_pink', cat: 'cute', title: 'Máy ảnh Y2K', src: '/stickers/cute/cute_camera_pink.png' },
+  { id: 'cute_xinh_iu', cat: 'cute', title: 'Xinh iu', src: '/stickers/cute/cute_xinh_iu.png' },
+  { id: 'cute_heart_silver', cat: 'cute', title: 'Trái tim bạc', src: '/stickers/cute/cute_heart_silver.png' },
+  { id: 'cute_sparkles_pink', cat: 'cute', title: 'Ngôi sao lấp lánh', src: '/stickers/cute/cute_sparkles_pink.png' },
+  { id: 'cute_bow_blue', cat: 'cute', title: 'Nơ ngọc bích', src: '/stickers/cute/cute_bow_blue.png' },
+  { id: 'cute_chat_bubble', cat: 'cute', title: 'Khung tin nhắn tím', src: '/stickers/cute/cute_chat_bubble.png' },
+  { id: 'cute_star_face', cat: 'cute', title: 'Ngôi sao mỉm cười', src: '/stickers/cute/cute_star_face.png' },
+  { id: 'cute_heart_holographic', cat: 'cute', title: 'Trái tim cầu vồng', src: '/stickers/cute/cute_heart_holographic.png' },
+  { id: 'flower', cat: 'classic', title: 'Hoa khô', src: '/sticker_flower.png' },
+  { id: 'leaf', cat: 'classic', title: 'Lá xanh', src: '/sticker_leaf.png' },
+  { id: 'heart', cat: 'classic', title: 'Dấu tim cổ điển', src: '/sticker_heart.png' },
+  { id: 'star', cat: 'classic', title: 'Ngôi sao', src: '/sticker_star.png' },
+  { id: 'postmark', cat: 'classic', title: 'Con tem bưu điện', src: '/sticker_postmark.png' }
+];
+
+let activeStickerCategory = 'cute';
+
+function getStickerSrc(type) {
+  const item = stickerList.find(s => s.id === type);
+  if (item) return item.src;
+  if (type.startsWith('cute_')) return `/stickers/cute/${type}.png`;
+  if (type.startsWith('classic_')) return `/stickers/classic/${type}.png`;
+  return `/sticker_${type}.png`;
+}
+
+function renderStickerLibrary() {
+  const filtered = activeStickerCategory === 'all' 
+    ? stickerList 
+    : stickerList.filter(s => s.cat === activeStickerCategory);
+
+  const tabsHtml = stickerCategories.map(cat => {
+    const count = cat.id === 'all' ? stickerList.length : stickerList.filter(s => s.cat === cat.id).length;
+    const activeClass = activeStickerCategory === cat.id ? 'active' : '';
+    return `<button type="button" class="cat-tab ${activeClass}" data-cat="${cat.id}">${cat.name} (${count})</button>`;
+  }).join('');
+
+  const gridHtml = filtered.map(s => `
+    <button type="button" class="sticker-item" draggable="true" data-type="${s.id}" title="Kéo hoặc click để đặt ${s.title}">
+      <img src="${s.src}" alt="${s.title}" class="sticker-img" />
+    </button>
+  `).join('');
+
+  return `
+    <div class="sticker-categories">${tabsHtml}</div>
+    <div class="decorations-library">${gridHtml}</div>
+  `;
+}
+
 const app = document.querySelector('#app');
 const toastRegion = document.querySelector('#toast-region');
 const modalRoot = document.querySelector('#modal-root');
@@ -173,13 +252,7 @@ function renderDesignStep() {
     <div class="field"><label>Màu phong bì · 9 lựa chọn</label><div class="swatches design-swatches">${renderSwatches('envelope', envelopeOptions)}</div></div>
     <div class="field">
       <label>Trang trí lá thư (Kéo thả hoặc click chọn)</label>
-      <div class="decorations-library">
-        <button type="button" class="sticker-item" draggable="true" data-type="flower" title="Kéo hoặc click để đặt hoa khô"><img src="/sticker_flower.png" alt="Hoa khô" class="sticker-img" /></button>
-        <button type="button" class="sticker-item" draggable="true" data-type="leaf" title="Kéo hoặc click để đặt lá xanh"><img src="/sticker_leaf.png" alt="Lá xanh" class="sticker-img" /></button>
-        <button type="button" class="sticker-item" draggable="true" data-type="heart" title="Kéo hoặc click để đặt dấu tim"><img src="/sticker_heart.png" alt="Dấu tim" class="sticker-img" /></button>
-        <button type="button" class="sticker-item" draggable="true" data-type="star" title="Kéo hoặc click để đặt ngôi sao"><img src="/sticker_star.png" alt="Ngôi sao" class="sticker-img" /></button>
-        <button type="button" class="sticker-item" draggable="true" data-type="postmark" title="Kéo hoặc click để đặt con tem"><img src="/sticker_postmark.png" alt="Con tem" class="sticker-img" /></button>
-      </div>
+      <div class="sticker-library-wrapper">${renderStickerLibrary()}</div>
     </div>
     <div class="info-note">${icon('info')}<span>Bản in thực tế có thể chênh lệch màu nhẹ tùy chất liệu giấy.</span></div>
   </section><aside class="preview-panel">${letterPreview()}</aside></div>${builderActions(3)}`;
@@ -205,7 +278,7 @@ function letterPreview() {
   const decos = (draft.decorations || []).map((deco) => {
     const type = deco.type === 'sparkles' ? 'postmark' : deco.type;
     return `<div class="placed-decoration sticker-${type}" style="left: ${deco.x}%; top: ${deco.y}%;" draggable="true" data-id="${deco.id}">
-      <img src="/sticker_${type}.png" alt="${type}" class="placed-sticker-img" />
+      <img src="${getStickerSrc(type)}" alt="${type}" class="placed-sticker-img" />
       <button type="button" class="remove-deco" data-remove-id="${deco.id}">&times;</button>
     </div>`;
   }).join('');
@@ -248,24 +321,38 @@ function bindBuilder(step) {
   if (step === 3) {
     const previewPanel = document.querySelector('.preview-panel');
     
-    // 1. Drag start for library items & click support
-    document.querySelectorAll('.decorations-library .sticker-item').forEach((item) => {
-      item.addEventListener('dragstart', (e) => {
-        e.dataTransfer.setData('text/plain', 'add:' + item.dataset.type);
-      });
-      item.addEventListener('click', () => {
-        if (!draft.decorations) draft.decorations = [];
-        const newDeco = {
-          id: 'deco-' + Date.now(),
-          type: item.dataset.type,
-          x: 50,
-          y: 50
+    // 1. Sticker library category tabs & item events
+    function bindStickerEvents() {
+      document.querySelectorAll('.sticker-categories .cat-tab').forEach((tab) => {
+        tab.onclick = () => {
+          activeStickerCategory = tab.dataset.cat;
+          const container = document.querySelector('.sticker-library-wrapper');
+          if (container) {
+            container.innerHTML = renderStickerLibrary();
+            bindStickerEvents();
+          }
         };
-        draft.decorations.push(newDeco);
-        persistDraft();
-        updatePreview();
       });
-    });
+
+      document.querySelectorAll('.decorations-library .sticker-item').forEach((item) => {
+        item.addEventListener('dragstart', (e) => {
+          e.dataTransfer.setData('text/plain', 'add:' + item.dataset.type);
+        });
+        item.addEventListener('click', () => {
+          if (!draft.decorations) draft.decorations = [];
+          const newDeco = {
+            id: 'deco-' + Date.now(),
+            type: item.dataset.type,
+            x: 50,
+            y: 50
+          };
+          draft.decorations.push(newDeco);
+          persistDraft();
+          updatePreview();
+        });
+      });
+    }
+    bindStickerEvents();
 
     // 2. Drag start for placed items
     bindPlacedDecorationsDrag();

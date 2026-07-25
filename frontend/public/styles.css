@@ -253,40 +253,81 @@ p { color: var(--gray); }
   .seal-halo::before { opacity: .6; transform: scale(1); }.seal-halo > span { opacity: .36; transform: scale(1.55); }
 }
 
-/* Drag & Drop Decorations */
-.decorations-library {
+/* Drag & Drop Decorations & Categories */
+.sticker-categories {
   display: flex;
+  gap: 8px;
+  margin-bottom: 10px;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 10px;
   flex-wrap: wrap;
-  gap: 16px;
-  margin-top: 10px;
-  padding: 8px 4px;
+}
+
+.cat-tab {
+  padding: 6px 14px;
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  background: var(--paper);
+  color: var(--gray);
+  font-size: 0.78rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.cat-tab:hover {
+  border-color: var(--burgundy);
+  color: var(--burgundy);
+}
+
+.cat-tab.active {
+  background: var(--burgundy);
+  color: var(--white);
+  border-color: var(--burgundy);
+  box-shadow: 0 3px 10px rgba(122, 38, 58, 0.2);
+}
+
+.decorations-library {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(54px, 1fr));
+  gap: 10px;
+  padding: 10px;
+  max-height: 230px;
+  overflow-y: auto;
+  background: var(--warm);
+  border: 1px solid var(--border);
+  border-radius: 12px;
 }
 
 .sticker-item {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  background: transparent;
-  border: none;
-  padding: 4px;
+  background: var(--white);
+  border: 1px solid rgba(222, 212, 200, 0.7);
+  border-radius: 10px;
+  padding: 5px;
   cursor: grab;
-  transition: transform 0.2s;
+  transition: all 0.2s cubic-bezier(0.22, 1, 0.36, 1);
   user-select: none;
+  box-shadow: 0 2px 5px rgba(43, 37, 35, 0.04);
 }
 
 .sticker-item:hover {
-  transform: scale(1.15);
+  transform: translateY(-3px) scale(1.12);
+  border-color: var(--burgundy);
+  box-shadow: 0 6px 16px rgba(122, 38, 58, 0.15);
 }
 
 .sticker-item:active {
   cursor: grabbing;
+  transform: scale(0.95);
 }
 
 .sticker-img {
-  width: 48px;
-  height: 48px;
+  width: 44px;
+  height: 44px;
   object-fit: contain;
-  mix-blend-mode: multiply; /* Blends white background into the workspace panel */
 }
 
 /* Placed Stickers on Letter Preview */
@@ -314,8 +355,8 @@ p { color: var(--gray); }
   width: 100%;
   height: 100%;
   object-fit: contain;
-  mix-blend-mode: multiply; /* Blends white background into the letter paper texture */
   pointer-events: none;
+  filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.12));
 }
 
 /* Delete button for placed stickers */
