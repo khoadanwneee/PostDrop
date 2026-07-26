@@ -3,16 +3,16 @@
 import { useMemo, useRef, useState } from 'react';
 import NextImage from 'next/image';
 import {
+  stickerCategories,
   stickerElements,
-  stickerKinds,
 } from '@/app/data/sticker-elements';
 import {
   LETTER_STICKER_MIME,
   serializeStickerDragPayload,
 } from '@/app/lib/letter-editor/drag-payload';
 import type {
-  DecorationKind,
   LetterFont,
+  StickerCategory,
   StickerDefinition,
 } from '@/app/types/letter-editor';
 
@@ -39,14 +39,16 @@ export function ElementToolbar({
   onAddShape,
   onAddImage,
 }: ElementToolbarProps) {
-  const [activeKind, setActiveKind] = useState<DecorationKind | 'all'>('all');
+  const [activeCategory, setActiveCategory] = useState<StickerCategory>('cute');
   const fileInputRef = useRef<HTMLInputElement>(null);
   const visibleStickers = useMemo(
     () =>
-      activeKind === 'all'
-        ? stickerElements
-        : stickerElements.filter((sticker) => sticker.kind === activeKind),
-    [activeKind],
+      stickerElements.filter(
+        (sticker) =>
+          sticker.category === activeCategory ||
+          sticker.src.includes(`/stickers/${activeCategory}/`),
+      ),
+    [activeCategory],
   );
 
   const handleFile = (file?: File) => {
@@ -147,18 +149,18 @@ export function ElementToolbar({
       <div
         className="element-kind-tabs"
         role="tablist"
-        aria-label="Lọc loại element"
+        aria-label="Lọc nhóm sticker"
       >
-        {stickerKinds.map((kind) => (
+        {stickerCategories.map((cat) => (
           <button
-            key={kind.id}
+            key={cat.id}
             type="button"
             role="tab"
-            aria-selected={activeKind === kind.id}
-            className={activeKind === kind.id ? 'is-active' : ''}
-            onClick={() => setActiveKind(kind.id)}
+            aria-selected={activeCategory === cat.id}
+            className={activeCategory === cat.id ? 'is-active' : ''}
+            onClick={() => setActiveCategory(cat.id)}
           >
-            {kind.label}
+            {cat.label}
           </button>
         ))}
       </div>
@@ -193,7 +195,6 @@ export function ElementToolbar({
               height={54}
               unoptimized
             />
-            <span>{sticker.name}</span>
           </button>
         ))}
         {visibleStickers.length === 0 ? (

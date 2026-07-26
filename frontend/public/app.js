@@ -1,4 +1,4 @@
-﻿const stickerCategories = [
+const stickerCategories = [
   { id: 'cute', name: 'Dễ thương' },
   { id: 'y2k', name: 'Y2K' },
   { id: 'study', name: 'Học tập' },
@@ -185,37 +185,8 @@ const app = document.querySelector('#app');
 const toastRegion = document.querySelector('#toast-region');
 const modalRoot = document.querySelector('#modal-root');
 
-const icons = {
-  menu: '<path d="M4 7h16M4 12h16M4 17h16"/>',
-  arrowRight: '<path d="M5 12h14M13 6l6 6-6 6"/>',
-  arrowLeft: '<path d="M19 12H5m6-6-6 6 6 6"/>',
-  pen: '<path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L8 18l-4 1 1-4Z"/>',
-  seal: '<circle cx="12" cy="8" r="5"/><path d="m8.8 12.3-.8 8.2 4-2 4 2-.8-8.2"/>',
-  archive: '<path d="M21 8v13H3V8M1 3h22v5H1zM10 12h4"/>',
-  truck: '<path d="M10 17h4V5H2v12h3m9-7h4l4 4v3h-3M7.5 20a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5Zm9 0a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5Z"/>',
-  mail: '<rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-10 6L2 7"/>',
-  upload: '<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4m13-7-4-4-4 4m4-4v12"/>',
-  shield: '<path d="M20 13c0 5-3.5 7.5-8 9-4.5-1.5-8-4-8-9V5l8-3 8 3Z"/><path d="m9 12 2 2 4-4"/>',
-  database: '<ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5v14c0 1.7 4 3 9 3s9-1.3 9-3V5M3 12c0 1.7 4 3 9 3s9-1.3 9-3"/>',
-  map: '<path d="m3 6 6-3 6 3 6-3v15l-6 3-6-3-6 3Z"/><path d="M9 3v15m6-12v15"/>',
-  check: '<path d="m5 12 4 4L19 6"/>',
-  chevron: '<path d="m9 18 6-6-6-6"/>',
-  info: '<circle cx="12" cy="12" r="10"/><path d="M12 16v-4m0-4h.01"/>',
-  calendar: '<rect width="18" height="18" x="3" y="4" rx="2"/><path d="M16 2v4M8 2v4m-5 4h18"/>',
-  bell: '<path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9m-8 13h4"/>',
-  plus: '<path d="M12 5v14M5 12h14"/>',
-  eye: '<path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/>',
-  clock: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
-  user: '<circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/>',
-  file: '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"/><path d="M14 2v6h6M8 13h8m-8 4h5"/>',
-  heart: '<path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/>',
-  star: '<polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>',
-  sparkles: '<path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275Z"/><path d="m5 3 1 2.5L8.5 6 6 7 5 9.5 4 7 1.5 6 4 5Z"/><path d="m19 17 1 2.5 2.5.5-2.5 1-1 2.5-1-2.5-2.5-1 2.5-1Z"/>',
-  leaf: '<path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 3.58 1 9.2A7 7 0 0 1 11 20Z"/><path d="M19 2c-2.26 4.33-5.27 7.14-8 10"/>',
-  flower: '<circle cx="12" cy="12" r="3"/><path d="M12 2a4 4 0 0 0-4 4 4 4 0 0 0 8 0 4 4 0 0 0-4-4Z"/><path d="M12 14a4 4 0 0 0-4 4 4 4 0 0 0 8 0 4 4 0 0 0-4-4Z"/><path d="M4 12a4 4 0 0 0 4 4 4 4 0 0 0 0-8 4 4 0 0 0-4 4Z"/><path d="M14 12a4 4 0 0 0 4 4 4 4 0 0 0 0-8 4 4 0 0 0-4 4Z"/>',
-};
-
-const icon = (name, className = '') => `<svg class="icon ${className}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${icons[name] || icons.file}</svg>`;
+const icons = {};
+const icon = () => '';
 const escapeHtml = (value = '') => String(value).replace(/[&<>'"]/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' })[char]);
 const formatDate = (value) => new Intl.DateTimeFormat('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' }).format(new Date(`${value}T00:00:00`));
 const futureDate = () => { const date = new Date(); date.setFullYear(date.getFullYear() + 1); return date.toISOString().slice(0, 10); };
@@ -524,12 +495,15 @@ function bindLanding() {
   }));
 }
 
-const steps = ['Loại thư', 'Nội dung', 'Thiết kế', 'Giao thư', 'Xác nhận'];
-function stepper(step) { return `<div class="stepper" aria-label="Tiến trình tạo thư">${steps.map((name, i) => `<div class="stepper-item ${i + 1 === step ? 'active' : i + 1 < step ? 'done' : ''}"><span class="stepper-dot">${i + 1 < step ? '✓' : i + 1}</span><span>${name}</span></div>`).join('')}</div>`; }
+const steps = ['Loại thư', 'Loại giấy', 'Viết & thiết kế', 'Quay video 3.5', 'Giao thư', 'Xác nhận'];
+function stepper(step) { return `<div class="stepper" aria-label="Tiến trình tạo thư">${steps.map((name, i) => `<div class="stepper-item ${i + 1 === step ? 'active' : i + 1 < step ? 'done' : ''}"><span class="stepper-dot">${i + 1 < step ? '✓' : i === 3 ? '3.5' : i < 3 ? i + 1 : i}</span><span>${name}</span></div>`).join('')}</div>`; }
 
 function renderBuilder(step = 1) {
   steps[1] = 'Lo\u1ea1i gi\u1ea5y';
   steps[2] = 'Vi\u1ebft & thi\u1ebft k\u1ebf';
+  steps[3] = 'Quay video 3.5';
+  steps[4] = 'Giao th\u01b0';
+  steps[5] = 'X\u00e1c nh\u1eadn';
   if (location.hash.includes('type=handwritten')) draft.letterType = 'handwritten';
   if (step >= 3 && draft.paperOrientation !== 'portrait' && draft.paperOrientation !== 'landscape') {
     location.hash = '/create/2';
@@ -537,12 +511,13 @@ function renderBuilder(step = 1) {
   }
   draft.lastStep = Math.max(Number(draft.lastStep || 1), step);
   persistDraft();
-  app.innerHTML = `<div class="app-page">${appHeader()}<main id="main-content" class="container builder-wrap"><div class="builder-head"><div><span class="eyebrow">BƯỚC ${step} / 5 — ${steps[step - 1].toUpperCase()}</span><h1>${stepTitle(step)}</h1><p>${stepDescription(step)}</p></div><span class="save-state">Đã lưu bản nháp</span></div>${stepper(step)}<div id="builder-content">${renderStep(step)}</div></main></div>`;
+  const stepEyebrow = step === 4 ? 'BƯỚC 3.5 / 5 — QUAY VIDEO CHO TƯƠNG LAI' : `BƯỚC ${step > 4 ? step - 1 : step} / 5 — ${steps[step - 1].toUpperCase()}`;
+  app.innerHTML = `<div class="app-page">${appHeader()}<main id="main-content" class="container builder-wrap"><div class="builder-head"><div><span class="eyebrow">${stepEyebrow}</span><h1>${stepTitle(step)}</h1><p>${stepDescription(step)}</p></div><span class="save-state">Đã lưu bản nháp</span></div>${stepper(step)}<div id="builder-content">${renderStep(step)}</div></main></div>`;
   bindBuilder(step);
 }
 
-function stepTitle(step) { return ['Bạn muốn gửi lá thư theo cách nào?','Bạn muốn viết thư với loại giấy nào?','Viết điều bạn muốn gặp lại','Lá thư sẽ tìm đến ai?','Kiểm tra trước khi niêm phong'][step - 1]; }
-function stepDescription(step) { return ['Chọn một cách phù hợp. Bạn vẫn có thể thay đổi ở bước sau.','Bạn vẫn có thể đổi loại giấy sau trong trình chỉnh sửa.','Viết trực tiếp trên trang thư rồi chọn theme và trang trí theo cách của bạn.','Thông tin này giúp PostDrop giao lá thư đúng người, đúng ngày.','Sau khi niêm phong, nội dung sẽ không thể chỉnh sửa.'][step - 1]; }
+function stepTitle(step) { return ['Bạn muốn gửi lá thư theo cách nào?','Bạn muốn viết thư với loại giấy nào?','Viết điều bạn muốn gặp lại','Gửi một lời nhắn cho chính mình trong tương lai','Lá thư sẽ tìm đến ai?','Kiểm tra trước khi niêm phong'][step - 1]; }
+function stepDescription(step) { return ['Chọn một cách phù hợp. Bạn vẫn có thể thay đổi ở bước sau.','Bạn vẫn có thể đổi loại giấy sau trong trình chỉnh sửa.','Viết trực tiếp trên trang thư rồi chọn theme và trang trí theo cách của bạn.','Quay lại cảm xúc, suy nghĩ hoặc lời nhắn của bạn ở thời điểm hiện tại. Video này sẽ được lưu cùng bức thư và chỉ được mở vào thời điểm bạn đã chọn.','Thông tin này giúp PostDrop giao lá thư đúng người, đúng ngày.','Sau khi niêm phong, nội dung sẽ không thể chỉnh sửa.'][step - 1]; }
 
 function renderSwatches(group, options) {
   return options.map(([value, colorClass, label]) => swatch(group, value, colorClass, label)).join('');
@@ -580,13 +555,19 @@ function renderDesignStep() {
   </div>${builderActions(3)}`;
 }
 
+function renderVideoStep() {
+  return `<div id="future-video-root" data-draft-id="${escapeHtml(draft.draftId)}" aria-live="polite">
+    <div class="skeleton" aria-label="Loading video recorder"></div>
+  </div>`;
+}
+
 function renderStep(step) {
   if (step === 2) return renderPaperOrientationStep();
   if (step === 3) return renderDesignStep();
+  if (step === 4) return renderVideoStep();
   if (step === 1) return `<div class="panel"><div class="choice-grid">${typeCard('online','pen','Viết thư trực tuyến','Soạn thư ngay trên PostDrop, chọn thiết kế và chúng tôi sẽ in hoặc gửi email.','5–10 phút','Từ 29.000đ')}${typeCard('handwritten','mail','Gửi thư viết tay','Bạn viết trên giấy và gửi đến PostDrop. Chúng tôi số hóa rồi bảo quản nguyên bản.','3–5 ngày','Từ 119.000đ')}</div>${builderActions(step)}</div>`;
-  if (step === 2) return renderPaperOrientationStep();
-  if (step === 4) return `<div class="workspace"><section class="panel"><h2>Thông tin người nhận</h2><div class="field"><label>Gửi lá thư này cho</label><div class="segmented">${segment('recipientMode','self','Chính tôi')}${segment('recipientMode','other','Người khác')}</div></div><div class="field-row">${field('recipientName','Họ tên người nhận',draft.recipientName,'Nguyễn Minh Anh')}${field('recipientEmail','Email',draft.recipientEmail,'minhanh@example.com','email')}</div><div class="field-row">${field('recipientPhone','Số điện thoại',draft.recipientPhone,'0901 234 567','tel')}${field('deliveryDate','Ngày dự kiến giao',draft.deliveryDate,'','date')}</div><div id="date-message" class="date-message">${dateMessage()}</div><div class="field"><label>Hình thức nhận</label><div class="segmented">${segment('deliveryMethod','email','Email')}${segment('deliveryMethod','physical','Thư vật lý')}${segment('deliveryMethod','hybrid','Cả hai')}</div></div><div class="field" id="address-field"><label for="address">Địa chỉ nhận</label><input id="address" data-draft="address" value="${escapeHtml(draft.address)}" placeholder="Số nhà, tên đường, quận/huyện, tỉnh/thành"/><div class="field-error" data-error="address"></div></div><div class="field"><label for="note">Ghi chú giao hàng <span style="font-weight:400;color:var(--muted)">(không bắt buộc)</span></label><textarea id="note" data-draft="note" style="min-height:95px" placeholder="Ví dụ: Gọi trước khi giao">${escapeHtml(draft.note)}</textarea></div></section><aside class="panel"><h2>Ngày gặp lại</h2><p class="panel-intro">Ngày bạn chọn sẽ trở thành một cột mốc. PostDrop sẽ đồng hành để lá thư không bị lạc đường.</p><div class="mini-envelope" style="width:100%;height:185px;aspect-ratio:auto"><span>${draft.deliveryDate ? formatDate(draft.deliveryDate) : 'Chưa chọn ngày'}</span></div><div class="info-note" style="margin-top:24px">${icon('info')}<span>PostDrop sẽ gửi yêu cầu xác nhận địa chỉ trước ngày giao 30 ngày.</span></div></aside></div>${builderActions(step)}`;
-  return `<div class="workspace"><section class="panel"><h2>Tóm tắt lá thư</h2><div class="envelope-preview" style="height:190px"><div class="mini-envelope" style="background:${envelopeColor()}"><span>${escapeHtml(draft.title || 'Lá thư của tôi')}</span></div></div><div class="summary-list">${summaryRow('Tiêu đề',draft.title || 'Chưa đặt tên')}${summaryRow('Người nhận',draft.recipientName || 'Chưa điền')}${summaryRow('Ngày gửi',draft.deliveryDate ? formatDate(draft.deliveryDate) : 'Chưa chọn')}${summaryRow('Hình thức',deliveryLabel())}${summaryRow('Mẫu phong bì',labelize(draft.envelope))}</div><div class="sealed-message">${icon('seal')} <strong>Nội dung sắp được niêm phong.</strong><br/>Bạn sẽ gặp lại những dòng chữ này vào đúng ngày đã chọn.</div></section><aside class="panel"><h2>Chi tiết thanh toán</h2><p class="panel-intro">Thanh toán một lần cho toàn bộ hành trình.</p><div class="summary-list">${summaryRow('Phí in',draft.deliveryMethod === 'email' ? '0đ' : '35.000đ')}${summaryRow('Phí lưu giữ','45.000đ')}${summaryRow('Phí giao hàng',draft.deliveryMethod === 'email' ? '0đ' : '39.000đ')}<div class="summary-row total-row"><span>Tổng thanh toán</span><strong>${totalPrice()}</strong></div></div><label class="seal-check"><input id="seal-confirm" type="checkbox"/><span>Tôi hiểu rằng sau khi niêm phong, nội dung lá thư sẽ không thể chỉnh sửa.</span></label><div class="field-error" data-error="seal"></div>${builderActions(step, true)}</aside></div>`;
+  if (step === 5) return `<div class="workspace"><section class="panel"><h2>Thông tin người nhận</h2><div class="field"><label>Gửi lá thư này cho</label><div class="segmented">${segment('recipientMode','self','Chính tôi')}${segment('recipientMode','other','Người khác')}</div></div><div class="field-row">${field('recipientName','Họ tên người nhận',draft.recipientName,'Nguyễn Minh Anh')}${field('recipientEmail','Email',draft.recipientEmail,'minhanh@example.com','email')}</div><div class="field-row">${field('recipientPhone','Số điện thoại',draft.recipientPhone,'0901 234 567','tel')}${field('deliveryDate','Ngày dự kiến giao',draft.deliveryDate,'','date')}</div><div id="date-message" class="date-message">${dateMessage()}</div><div class="field"><label>Hình thức nhận</label><div class="segmented">${segment('deliveryMethod','email','Email')}${segment('deliveryMethod','physical','Thư vật lý')}${segment('deliveryMethod','hybrid','Cả hai')}</div></div><div class="field" id="address-field"><label for="address">Địa chỉ nhận</label><input id="address" data-draft="address" value="${escapeHtml(draft.address)}" placeholder="Số nhà, tên đường, quận/huyện, tỉnh/thành"/><div class="field-error" data-error="address"></div></div><div class="field"><label for="note">Ghi chú giao hàng <span style="font-weight:400;color:var(--muted)">(không bắt buộc)</span></label><textarea id="note" data-draft="note" style="min-height:95px" placeholder="Ví dụ: Gọi trước khi giao">${escapeHtml(draft.note)}</textarea></div></section><aside class="panel"><h2>Ngày gặp lại</h2><p class="panel-intro">Ngày bạn chọn sẽ trở thành một cột mốc. PostDrop sẽ đồng hành để lá thư không bị lạc đường.</p><div class="mini-envelope" style="width:100%;height:185px;aspect-ratio:auto"><span>${draft.deliveryDate ? formatDate(draft.deliveryDate) : 'Chưa chọn ngày'}</span></div><div class="info-note" style="margin-top:24px">${icon('info')}<span>PostDrop sẽ gửi yêu cầu xác nhận địa chỉ trước ngày giao 30 ngày.</span></div></aside></div>${builderActions(step)}`;
+  return `<div class="workspace"><section class="panel"><h2>Tóm tắt lá thư</h2><div class="envelope-preview" style="height:190px"><div class="mini-envelope" style="background:${envelopeColor()}"><span>${escapeHtml(draft.title || 'Lá thư của tôi')}</span></div></div><div class="summary-list">${summaryRow('Tiêu đề',draft.title || 'Chưa đặt tên')}${summaryRow('Người nhận',draft.recipientName || 'Chưa điền')}${summaryRow('Ngày gửi',draft.deliveryDate ? formatDate(draft.deliveryDate) : 'Chưa chọn')}${summaryRow('Video nhắn gửi',draft.videoDataUrl ? 'Đã đính kèm video' : 'Không có')}${summaryRow('Hình thức',deliveryLabel())}${summaryRow('Mẫu phong bì',labelize(draft.envelope))}</div><div class="sealed-message">${icon('seal')} <strong>Nội dung sắp được niêm phong.</strong><br/>Bạn sẽ gặp lại những dòng chữ này vào đúng ngày đã chọn.</div></section><aside class="panel"><h2>Chi tiết thanh toán</h2><p class="panel-intro">Thanh toán một lần cho toàn bộ hành trình.</p><div class="summary-list">${summaryRow('Phí in',draft.deliveryMethod === 'email' ? '0đ' : '35.000đ')}${summaryRow('Phí lưu giữ','45.000đ')}${summaryRow('Phí giao hàng',draft.deliveryMethod === 'email' ? '0đ' : '39.000đ')}<div class="summary-row total-row"><span>Tổng thanh toán</span><strong>${totalPrice()}</strong></div></div><label class="seal-check"><input id="seal-confirm" type="checkbox"/><span>Tôi hiểu rằng sau khi niêm phong, nội dung lá thư sẽ không thể chỉnh sửa.</span></label><div class="field-error" data-error="seal"></div>${builderActions(step, true)}</aside></div>`;
 }
 
 function typeCard(type, iconName, title, description, time, price) { const selected = draft.letterType === type; return `<button class="choice-card ${selected ? 'selected' : ''}" data-type="${type}" aria-pressed="${selected}"><span class="choice-check">${selected ? '✓' : ''}</span><div class="choice-visual">${icon(iconName)}</div><h3>${title}</h3><p>${description}</p><div class="service-meta"><span>${time}</span><span>${price}</span></div></button>`; }
@@ -651,7 +632,175 @@ function envelopeColor() { return ({
 })[draft.envelope] || '#7a263a'; }
 function wordCount(text) { return text.trim() ? text.trim().split(/\s+/).length : 0; }
 function dateMessage() { const days = Math.max(0, Math.ceil((new Date(`${draft.deliveryDate}T00:00:00`) - new Date()) / 86400000)); return `Lá thư này sẽ được gửi sau ${new Intl.NumberFormat('vi-VN').format(days)} ngày.`; }
-function builderActions(step, checkout = false) { return `<div class="builder-actions">${step > 1 ? '<button class="text-button" data-save-later>Lưu và hoàn thành sau</button>' : '<span></span>'}<div class="builder-actions-group">${step > 1 ? `<button class="button button-secondary" data-back>${icon('arrowLeft')}Quay lại</button>` : ''}<button class="button button-primary" data-next>${checkout ? 'Thanh toán và niêm phong' : 'Tiếp tục'}${icon(checkout ? 'seal' : 'arrowRight')}</button></div></div>`; }
+function builderActions(step, checkout = false) { return `<div class="builder-actions">${step > 1 ? '<button type="button" class="text-button" data-save-later>Lưu và hoàn thành sau</button>' : '<span></span>'}<div class="builder-actions-group">${step > 1 ? `<button type="button" class="button button-secondary" data-back>${icon('arrowLeft')}Quay lại</button>` : ''}${step === 4 ? `<button type="button" class="button button-secondary" data-skip-video>Bỏ qua bước này</button>` : ''}<button type="button" class="button button-primary" data-next>${checkout ? 'Thanh toán và niêm phong' : 'Tiếp tục'}${icon(checkout ? 'seal' : 'arrowRight')}</button></div></div>`; }
+
+let cameraStream = null;
+let videoMediaRecorder = null;
+let videoChunks = [];
+let recordTimerInterval = null;
+let recordSeconds = 0;
+
+function bindVideoStep() {
+  const videoPreview = document.querySelector('#video-camera-preview');
+  const playbackPreview = document.querySelector('#video-playback-preview');
+  const btnStart = document.querySelector('#btn-start-record');
+  const btnStop = document.querySelector('#btn-stop-record');
+  const btnRerecord = document.querySelector('#btn-rerecord');
+  const fileInput = document.querySelector('#video-file-input');
+  const statusBadge = document.querySelector('#video-status-badge');
+  const timerDisplay = document.querySelector('#video-timer-display');
+  const errorNotice = document.querySelector('#video-error-message');
+
+  document.querySelector('[data-skip-video]')?.addEventListener('click', () => {
+    stopCameraStream();
+    location.hash = '/create/5';
+  });
+
+  function stopCameraStream() {
+    if (recordTimerInterval) clearInterval(recordTimerInterval);
+    if (cameraStream) {
+      cameraStream.getTracks().forEach((track) => track.stop());
+      cameraStream = null;
+    }
+  }
+
+  async function startCamera() {
+    if (draft.videoDataUrl) return;
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) return;
+    try {
+      try {
+        cameraStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+      } catch (audioErr) {
+        console.warn('Could not acquire audio + video stream, falling back to video only:', audioErr);
+        cameraStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+      }
+      if (videoPreview && cameraStream) {
+        videoPreview.srcObject = cameraStream;
+        await videoPreview.play().catch((e) => console.warn('Autoplay prevented:', e));
+      }
+    } catch (err) {
+      console.warn('Camera error:', err);
+    }
+  }
+
+  if (!draft.videoDataUrl) {
+    startCamera();
+  }
+
+  btnStart?.addEventListener('click', () => {
+    if (!cameraStream) {
+      toast('Không tìm thấy camera. Bạn có thể tải tệp video lên bên dưới.', 'error');
+      return;
+    }
+    videoChunks = [];
+    try {
+      videoMediaRecorder = new MediaRecorder(cameraStream);
+    } catch (e) {
+      toast('Trình duyệt không hỗ trợ MediaRecorder.', 'error');
+      return;
+    }
+
+    videoMediaRecorder.ondataavailable = (evt) => {
+      if (evt.data && evt.data.size > 0) videoChunks.push(evt.data);
+    };
+
+    videoMediaRecorder.onstop = () => {
+      stopCameraStream();
+      const blob = new Blob(videoChunks, { type: 'video/webm' });
+      const reader = new FileReader();
+      reader.onload = () => {
+        draft.videoDataUrl = reader.result;
+        persistDraft();
+        if (playbackPreview) {
+          playbackPreview.src = reader.result;
+          playbackPreview.classList.remove('hidden');
+        }
+        videoPreview?.classList.add('hidden');
+        btnStart.classList.add('hidden');
+        btnStop?.classList.add('hidden');
+        btnRerecord?.classList.remove('hidden');
+        if (statusBadge) {
+          statusBadge.className = 'video-status-badge is-done';
+          statusBadge.textContent = 'Đã lưu video nhắn gửi';
+        }
+      };
+      reader.readAsDataURL(blob);
+    };
+
+    videoMediaRecorder.start(100);
+    recordSeconds = 0;
+    btnStart.classList.add('hidden');
+    btnStop?.classList.remove('hidden');
+    if (statusBadge) {
+      statusBadge.className = 'video-status-badge is-recording';
+      statusBadge.textContent = 'Đang quay video...';
+    }
+
+    recordTimerInterval = setInterval(() => {
+      recordSeconds++;
+      const mins = String(Math.floor(recordSeconds / 60)).padStart(2, '0');
+      const secs = String(recordSeconds % 60).padStart(2, '0');
+      if (timerDisplay) timerDisplay.textContent = `${mins}:${secs} / 01:00`;
+      if (recordSeconds >= 60) {
+        clearInterval(recordTimerInterval);
+        videoMediaRecorder.stop();
+        toast('Đã đạt thời lượng tối đa 1 phút.', 'info');
+      }
+    }, 1000);
+  });
+
+  btnStop?.addEventListener('click', () => {
+    if (videoMediaRecorder && videoMediaRecorder.state !== 'inactive') {
+      clearInterval(recordTimerInterval);
+      videoMediaRecorder.stop();
+    }
+  });
+
+  btnRerecord?.addEventListener('click', () => {
+    draft.videoDataUrl = null;
+    persistDraft();
+    if (playbackPreview) {
+      playbackPreview.src = '';
+      playbackPreview.classList.add('hidden');
+    }
+    videoPreview?.classList.remove('hidden');
+    btnRerecord.classList.add('hidden');
+    btnStart?.classList.remove('hidden');
+    if (timerDisplay) timerDisplay.textContent = '00:00 / 01:00';
+    if (statusBadge) {
+      statusBadge.className = 'video-status-badge is-ready';
+      statusBadge.textContent = 'Sẵn sàng quay';
+    }
+    startCamera();
+  });
+
+  fileInput?.addEventListener('change', (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 15_000_000) {
+      toast('Tệp video cần nhỏ hơn 15MB.', 'error');
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => {
+      stopCameraStream();
+      draft.videoDataUrl = reader.result;
+      persistDraft();
+      if (playbackPreview) {
+        playbackPreview.src = reader.result;
+        playbackPreview.classList.remove('hidden');
+      }
+      videoPreview?.classList.add('hidden');
+      btnStart?.classList.add('hidden');
+      btnRerecord?.classList.remove('hidden');
+      if (statusBadge) {
+        statusBadge.className = 'video-status-badge is-done';
+        statusBadge.textContent = 'Đã tải video lên';
+      }
+    };
+    reader.readAsDataURL(file);
+  });
+}
 
 function bindBuilder(step) {
   document.querySelectorAll('[data-type]').forEach((card) => card.onclick = () => { draft.letterType = card.dataset.type; persistDraft(); renderBuilder(step); });
@@ -677,12 +826,20 @@ function bindBuilder(step) {
     renderBuilder(step);
   });
   document.querySelector('[data-back]')?.addEventListener('click', () => {
+    if (step === 4 && cameraStream) {
+      cameraStream.getTracks().forEach((track) => track.stop());
+      cameraStream = null;
+    }
     flushPersistDraft();
     location.hash = `/create/${step - 1}`;
   });
   document.querySelector('[data-next]')?.addEventListener('click', () => nextStep(step));
   document.querySelector('[data-save-later]')?.addEventListener('click', () => { flushPersistDraft(); toast('Bản nháp đã được lưu. Bạn có thể quay lại bất cứ lúc nào.', 'success'); setTimeout(() => location.hash = '/dashboard', 700); });
   document.querySelector('[data-upload]')?.addEventListener('click', () => toast('Ảnh sẽ được tối ưu và đính kèm vào lá thư (bản prototype).'));
+
+  if (step === 4) {
+    bindVideoStep();
+  }
 
   if (step === 3) {
     const previewPanel = document.querySelector('.preview-panel');
@@ -1024,7 +1181,7 @@ async function nextStep(step) {
       return;
     }
   }
-  if (step === 4) {
+  if (step === 5) {
     let valid = true;
     if (draft.recipientName.trim().length < 2) { setError('recipientName','Vui lòng nhập họ tên người nhận.'); valid = false; }
     if (!/^\S+@\S+\.\S+$/.test(draft.recipientEmail)) { setError('recipientEmail','Email chưa đúng định dạng.'); valid = false; }
@@ -1032,7 +1189,7 @@ async function nextStep(step) {
     if (new Date(draft.deliveryDate) <= new Date()) { setError('deliveryDate','Ngày giao cần nằm trong tương lai.'); valid = false; }
     if (!valid) { toast('Vẫn còn thông tin cần hoàn thiện.', 'error'); return; }
   }
-  if (step === 5) {
+  if (step === 6) {
     if (!document.querySelector('#seal-confirm')?.checked) { document.querySelector('[data-error="seal"]').textContent = 'Bạn cần xác nhận điều này trước khi niêm phong.'; return; }
     openModal({ title: 'Niêm phong lá thư?', message: 'Đây là khoảnh khắc cuối cùng bạn có thể quay lại chỉnh sửa nội dung.', confirm: 'Niêm phong ngay', onConfirm: submitLetter });
     return;
@@ -1134,7 +1291,7 @@ function route() {
   window.scrollTo(0, 0);
   const hash = location.hash.slice(1) || '/';
   if (hash === '/create/resume') {
-    const requestedStep = Math.min(5, Math.max(1, Number(draft.lastStep || 1)));
+    const requestedStep = Math.min(6, Math.max(1, Number(draft.lastStep || 1)));
     const resumeStep =
       requestedStep >= 3 && !draft.paperOrientation ? 2 : requestedStep;
     history.replaceState(null, '', `${location.pathname}${location.search}#/create/${resumeStep}`);
@@ -1143,10 +1300,8 @@ function route() {
   if (hash.startsWith('/create/')) {
     const [path, query = ''] = hash.split('?');
     const params = new URLSearchParams(query);
-    const requestedStep = Math.min(
-      5,
-      Math.max(1, Number(path.split('/')[2]) || 1),
-    );
+    const stepArg = path.split('/')[2];
+    const requestedStep = stepArg === '3.5' ? 4 : Math.min(6, Math.max(1, Number(stepArg) || 1));
     if (params.get('new') === '1') {
       const letterType =
         params.get('type') === 'handwritten' ? 'handwritten' : 'online';
@@ -1350,6 +1505,24 @@ function initIntro() {
   const envelopeTrigger = document.querySelector('.envelope-stage');
   envelopeTrigger.addEventListener('click', startOpening);
 }
+window.addEventListener('postdrop-video-confirmed', (evt) => {
+  const videoData = evt.detail;
+  if (videoData && videoData.url) {
+    draft.videoDataUrl = videoData.url;
+    draft.videoMetadata = videoData;
+    persistDraft();
+  }
+  location.hash = '/create/5';
+});
+
+window.addEventListener('postdrop-video-skipped', () => {
+  location.hash = '/create/5';
+});
+
+window.addEventListener('postdrop-video-back', () => {
+  location.hash = '/create/3';
+});
+
 window.addEventListener('hashchange', route);
 initIntro();
 route();

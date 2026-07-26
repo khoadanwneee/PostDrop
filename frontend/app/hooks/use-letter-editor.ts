@@ -29,12 +29,13 @@ export interface InitialEditorState {
 }
 
 export function useLetterEditor(initial: InitialEditorState) {
-  const [paperOrientation, setPaperOrientation] =
-    useState<PaperOrientation | null>(initial.paperOrientation);
+  const [paperOrientation, setPaperOrientation] = useState<PaperOrientation>(
+    initial.paperOrientation ?? 'portrait',
+  );
   const [history, setHistory] = useState<EditorHistory>(() => ({
     past: [],
     present: createSnapshot(
-      initial.paperOrientation,
+      initial.paperOrientation ?? 'portrait',
       initial.selectedThemeId,
       initial.userElements,
     ),

@@ -144,10 +144,6 @@ export function ThemeSidebar({
                   <ThemeThumbnailElement key={element.id} element={element} />
                 ))}
               </span>
-              <span className="editor-theme-copy">
-                <strong>{theme.name}</strong>
-                <small>{theme.description}</small>
-              </span>
               <span className="editor-theme-state" aria-hidden="true">
                 {active ? '✓' : ''}
               </span>

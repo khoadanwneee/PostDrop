@@ -16,9 +16,13 @@ import {
 } from './letter-editor';
 import { PaperOrientationSelector } from './paper-orientation-selector';
 
+import { FutureVideoStep } from '../future-video/FutureVideoStep';
+import type { UploadedVideo } from '@/app/types/future-video';
+
 interface PortalHosts {
   editor: HTMLElement | null;
   orientation: HTMLElement | null;
+  video: HTMLElement | null;
 }
 
 interface BridgeDraft {
@@ -61,10 +65,12 @@ export function LetterEditorBridge() {
   const hostsRef = useRef<PortalHosts>({
     editor: null,
     orientation: null,
+    video: null,
   });
   const [hosts, setHosts] = useState<PortalHosts>({
     editor: null,
     orientation: null,
+    video: null,
   });
   const [bridgeDraft, setBridgeDraft] = useState<BridgeDraft | null>(null);
 
@@ -86,18 +92,20 @@ export function LetterEditorBridge() {
         orientation: document.querySelector<HTMLElement>(
           '#paper-orientation-root',
         ),
+        video: document.querySelector<HTMLElement>('#future-video-root'),
       };
       const currentHosts = hostsRef.current;
       if (
         currentHosts.editor === nextHosts.editor &&
-        currentHosts.orientation === nextHosts.orientation
+        currentHosts.orientation === nextHosts.orientation &&
+        currentHosts.video === nextHosts.video
       ) {
         return;
       }
 
       hostsRef.current = nextHosts;
       setHosts(nextHosts);
-      if (nextHosts.editor || nextHosts.orientation) hydrate();
+      if (nextHosts.editor || nextHosts.orientation || nextHosts.video) hydrate();
     };
 
     const handleDraftReset = () => {
@@ -184,6 +192,22 @@ export function LetterEditorBridge() {
     [],
   );
 
+  const handleVideoConfirmed = useCallback((uploadedVideo: UploadedVideo) => {
+    window.dispatchEvent(
+      new CustomEvent('postdrop-video-confirmed', {
+        detail: uploadedVideo,
+      }),
+    );
+  }, []);
+
+  const handleSkipVideo = useCallback(() => {
+    window.dispatchEvent(new CustomEvent('postdrop-video-skipped'));
+  }, []);
+
+  const handleBackVideo = useCallback(() => {
+    window.dispatchEvent(new CustomEvent('postdrop-video-back'));
+  }, []);
+
   if (!bridgeDraft) return null;
 
   const orientationPortal = hosts.orientation
@@ -212,11 +236,29 @@ export function LetterEditorBridge() {
         hosts.editor,
       )
     : null;
+  const videoPortal = hosts.video
+    ? createPortal(
+        <>
+          <link rel={'stylesheet'} href={'/letter-editor.css'} />
+          <FutureVideoStep
+            key={`future-video-${bridgeDraft.draftId ?? 'anonymous'}-${bridgeDraft.mountRevision}`}
+            userId={bridgeDraft.draftId ?? 'user_guest'}
+            letterId={bridgeDraft.draftId ?? 'letter_draft'}
+            onVideoConfirmed={handleVideoConfirmed}
+            onSkipStep={handleSkipVideo}
+            onBackStep={handleBackVideo}
+          />
+        </>,
+        hosts.video,
+      )
+    : null;
 
   return (
     <>
       {orientationPortal}
       {editorPortal}
+      {videoPortal}
     </>
   );
 }
+

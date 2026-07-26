@@ -39,8 +39,8 @@ export function createPersistedEditorDraft(
 
 export function createNewEditorDraft() {
   return {
-    paperOrientation: null,
-    selectedThemeId: null,
+    paperOrientation: 'portrait' as PaperOrientation,
+    selectedThemeId: 'none-portrait',
     letterContent: '',
     letterTitle: '',
     userElements: [] as ThemeElement[],
@@ -60,23 +60,12 @@ export function restoreEditorState(
 ) {
   const editorDraft = isRecord(rawEditorDraft) ? rawEditorDraft : {};
   const legacyDraft = isRecord(rawLegacyDraft) ? rawLegacyDraft : {};
-  const legacyHasOrientation = Object.prototype.hasOwnProperty.call(
-    legacyDraft,
-    'paperOrientation',
-  );
 
-  let paperOrientation: PaperOrientation | null = null;
+  let paperOrientation: PaperOrientation = 'portrait';
   if (isPaperOrientation(editorDraft.paperOrientation)) {
     paperOrientation = editorDraft.paperOrientation;
   } else if (isPaperOrientation(legacyDraft.paperOrientation)) {
     paperOrientation = legacyDraft.paperOrientation;
-  } else if (
-    !legacyHasOrientation &&
-    (typeof editorDraft.selectedThemeId === 'string' ||
-      Array.isArray(editorDraft.userElements))
-  ) {
-    // Drafts created before schema v2 were portrait-only.
-    paperOrientation = 'portrait';
   }
 
   const requestedThemeId =
@@ -87,9 +76,10 @@ export function restoreEditorState(
         : typeof legacyDraft.theme === 'string'
           ? legacyDraft.theme
           : null;
-  const selectedThemeId = paperOrientation
-    ? resolveThemeForOrientation(requestedThemeId, paperOrientation).id
-    : null;
+  const selectedThemeId = resolveThemeForOrientation(
+    requestedThemeId,
+    paperOrientation,
+  ).id;
 
   return {
     paperOrientation,

@@ -1,4 +1,4 @@
-﻿import { existsSync } from 'node:fs';
+import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 import {
   isPaperOrientation,
@@ -240,11 +240,10 @@ describe('theme filtering and orientation invariants', () => {
 });
 
 describe('orientation state transitions', () => {
-  it('keeps the editor gated when no paper orientation is selected', () => {
-    expect(createSnapshot(null, 'cute-portrait', [element()])).toEqual({
-      selectedThemeId: null,
-      elements: [],
-    });
+  it('defaults to portrait paper orientation when no paper orientation is specified', () => {
+    expect(createSnapshot(null, 'cute-portrait', [element()])).toEqual(
+      createSnapshot('portrait', 'cute-portrait', [element()]),
+    );
   });
 
   it.each(PAPER_ORIENTATIONS)(
@@ -643,8 +642,8 @@ describe('persistence migration and new drafts', () => {
         content: 'Builder content',
       },
     );
-    expect(restored.paperOrientation).toBeNull();
-    expect(restored.selectedThemeId).toBeNull();
+    expect(restored.paperOrientation).toBe('portrait');
+    expect(restored.selectedThemeId).toBe('study-portrait');
     expect(restored.letterTitle).toBe('Builder title');
     expect(restored.letterContent).toBe('Builder content');
   });
@@ -690,12 +689,12 @@ describe('persistence migration and new drafts', () => {
     },
   );
 
-  it('creates isolated empty drafts that show the paper selector', () => {
+  it('creates isolated empty drafts that start directly in portrait orientation', () => {
     const first = createNewEditorDraft();
     const second = createNewEditorDraft();
     expect(first).toEqual({
-      paperOrientation: null,
-      selectedThemeId: null,
+      paperOrientation: 'portrait',
+      selectedThemeId: 'none-portrait',
       letterContent: '',
       letterTitle: '',
       userElements: [],

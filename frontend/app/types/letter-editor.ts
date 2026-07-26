@@ -139,10 +139,18 @@ export interface PersistedLetterEditorDraft {
   updatedAt: string;
 }
 
+export type StickerCategory =
+  | 'cute'
+  | 'y2k'
+  | 'study'
+  | 'scrapbook'
+  | 'classic';
+
 export interface StickerDefinition {
   id: string;
   name: string;
   kind: DecorationKind;
+  category?: StickerCategory;
   src: string;
   aspectRatio: number;
   defaultWidth: number;

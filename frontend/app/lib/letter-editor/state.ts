@@ -18,20 +18,18 @@ export function createSnapshot(
   selectedThemeId: string | null,
   userElements: ThemeElement[] = [],
 ): LetterEditorSnapshot {
-  if (!paperOrientation) {
-    return { selectedThemeId: null, elements: [] };
-  }
+  const actualOrientation = paperOrientation ?? 'portrait';
 
   const theme = resolveThemeForOrientation(
     selectedThemeId,
-    paperOrientation,
+    actualOrientation,
   );
   const validUserElements = normalizeElementsForSafeArea(
     userElements
       .filter((element) => element.source === 'user')
       .map((element) => ({ ...element, initial: { ...element.initial } })),
     theme.safeArea,
-    PAPER_CONFIGS[paperOrientation],
+    PAPER_CONFIGS[actualOrientation],
   );
 
   return {

@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { PAPER_CONFIGS } from '@/app/config/paper-configs';
+import { getDefaultThemeForOrientation } from '@/app/data/letter-themes';
 import { stickerElements } from '@/app/data/sticker-elements';
 import { useLetterEditor } from '@/app/hooks/use-letter-editor';
 import { useLocalStorageDraft } from '@/app/hooks/use-local-storage-draft';
@@ -24,7 +25,6 @@ import type {
 import { ChangePaperDialog } from './change-paper-dialog';
 import { ElementToolbar } from './element-toolbar';
 import { LetterCanvas } from './letter-canvas';
-import { PaperOrientationSelector } from './paper-orientation-selector';
 import { SelectedElementToolbar } from './selected-element-toolbar';
 import { ThemeSidebar } from './theme-sidebar';
 
@@ -236,10 +236,6 @@ export function LetterEditor({ initialDraft, onChange }: LetterEditorProps) {
     editor.selectTheme(themeId);
   };
 
-  const handleInitialOrientation = (nextOrientation: PaperOrientation) => {
-    editor.choosePaperOrientation(nextOrientation);
-  };
-
   const handleOrientationChange = (nextOrientation: PaperOrientation) => {
     editor.choosePaperOrientation(nextOrientation);
     setChangePaperOpen(false);
@@ -252,18 +248,10 @@ export function LetterEditor({ initialDraft, onChange }: LetterEditorProps) {
     hasUnsavedChanges: editor.history.past.length > 0,
   });
 
-  if (!orientation || !editor.selectedTheme || !selectedThemeId) {
-    return (
-      <section
-        className="letter-editor-app letter-editor-orientation-gate"
-        aria-label="Chọn loại giấy"
-      >
-        <PaperOrientationSelector onSelect={handleInitialOrientation} />
-      </section>
-    );
-  }
-
-  const selectedTheme = editor.selectedTheme;
+  const currentOrientation: PaperOrientation = orientation ?? 'portrait';
+  const selectedTheme =
+    editor.selectedTheme ?? getDefaultThemeForOrientation(currentOrientation);
+  const currentThemeId = selectedThemeId ?? selectedTheme.id;
   const minimumZIndex = Math.min(
     0,
     ...elements.map((element) => element.zIndex),
@@ -286,7 +274,7 @@ export function LetterEditor({ initialDraft, onChange }: LetterEditorProps) {
           const duplicated = duplicateElement(
             editor.selectedElement,
             selectedTheme.safeArea,
-            orientation,
+            currentOrientation,
             maxZIndex + 1,
           );
           addElement(duplicated, 'Đã nhân bản element.');
@@ -323,14 +311,14 @@ export function LetterEditor({ initialDraft, onChange }: LetterEditorProps) {
       />
       <div className="letter-editor-layout">
         <ThemeSidebar
-          orientation={orientation}
-          selectedThemeId={selectedThemeId}
+          orientation={currentOrientation}
+          selectedThemeId={currentThemeId}
           onSelect={handleThemeSelect}
           onChangeOrientation={() => setChangePaperOpen(true)}
         />
         <main
           className="letter-editor-stage"
-          aria-label={`Trang thư A4 ${PAPER_CONFIGS[orientation].label.toLowerCase()}`}
+          aria-label={`Trang thư A4 ${PAPER_CONFIGS[currentOrientation].label.toLowerCase()}`}
         >
           <div ref={viewportRef} className="letter-canvas-viewport">
             <div
