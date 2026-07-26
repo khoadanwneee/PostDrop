@@ -3,6 +3,7 @@ interface Environment {
   CORS_ORIGIN?: string;
   SUPABASE_URL: string;
   SUPABASE_PUBLISHABLE_KEY: string;
+  SUPABASE_SERVICE_ROLE_KEY: string;
   LETTER_ENCRYPTION_KEY: string;
 }
 
@@ -10,6 +11,7 @@ export function validateEnvironment(config: Record<string, unknown>): Environmen
   const required = [
     'SUPABASE_URL',
     'SUPABASE_PUBLISHABLE_KEY',
+    'SUPABASE_SERVICE_ROLE_KEY',
     'LETTER_ENCRYPTION_KEY',
   ] as const;
 

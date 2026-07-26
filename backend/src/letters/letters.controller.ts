@@ -69,6 +69,6 @@ export class LettersController {
 
   @Post(':id/seal')
   seal(@CurrentAuth() auth: CurrentAuthValue, @Param('id') id: string) {
-    return this.lettersService.seal(auth.supabase, id);
+    return this.lettersService.seal(auth.supabase, auth.user.id, id);
   }
 }

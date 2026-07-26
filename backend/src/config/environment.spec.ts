@@ -4,6 +4,7 @@ describe('validateEnvironment', () => {
   const valid = {
     SUPABASE_URL: 'http://127.0.0.1:54321',
     SUPABASE_PUBLISHABLE_KEY: 'test-key',
+    SUPABASE_SERVICE_ROLE_KEY: 'test-service-role-key',
     LETTER_ENCRYPTION_KEY: Buffer.alloc(32, 1).toString('base64'),
   };
 
@@ -15,6 +16,12 @@ describe('validateEnvironment', () => {
     expect(() =>
       validateEnvironment({ ...valid, SUPABASE_URL: '' }),
     ).toThrow('SUPABASE_URL');
+  });
+
+  it('rejects a missing service-role key', () => {
+    expect(() =>
+      validateEnvironment({ ...valid, SUPABASE_SERVICE_ROLE_KEY: '' }),
+    ).toThrow('SUPABASE_SERVICE_ROLE_KEY');
   });
 
   it('rejects an invalid encryption key length', () => {

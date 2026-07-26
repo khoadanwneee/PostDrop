@@ -1,8 +1,8 @@
 # PostDrop — Kiến trúc hệ thống hiện tại
 
-**Cập nhật:** 2026-07-25
+**Cập nhật:** 2026-07-26
 
-**Baseline:** `origin/main` tại commit `d304875`
+**Baseline:** working tree sau commit `2ad9336`
 
 **Phạm vi:** Mô tả code đã có; không coi thiết kế tương lai là thành phần đã triển khai
 
@@ -28,6 +28,7 @@ flowchart LR
     API[NestJS API]
     Auth[Supabase Auth]
     DB[(Supabase PostgreSQL)]
+    Storage[(Supabase Storage)]
     Local[(localStorage)]
 
     User --> FE
@@ -35,9 +36,10 @@ flowchart LR
     FE -. API integration chưa hoàn chỉnh .-> API
     API --> Auth
     API --> DB
+    API --> Storage
 ~~~
 
-Không có worker, Redis, payment provider, email delivery provider, attachment Storage workflow hoặc physical-delivery integration trong runtime hiện tại.
+Không có worker, Redis, payment provider, email delivery provider hoặc physical-delivery integration trong runtime hiện tại.
 
 ## 3. Repository và ownership
 
@@ -57,7 +59,7 @@ Không có worker, Redis, payment provider, email delivery provider, attachment 
 | API | NestJS 11, Express adapter | Validation, Auth API, letter CRUD/seal, Swagger, CORS |
 | Supabase Auth | Supabase | Register, login, refresh, logout, user verification |
 | PostgreSQL | Supabase PostgreSQL/PostgREST | Source of truth, RLS, constraints, atomic seal RPC |
-| Supabase Storage | Public built-ins + private user media | Sticker catalog, signed uploads and draft attachments |
+| Supabase Storage | Public built-ins + private draft media + backend-only sealed media | Signed uploads, draft composition và encrypted attachment snapshots |
 
 ### 4.1 Frontend runtime
 
@@ -70,8 +72,8 @@ Không có worker, Redis, payment provider, email delivery provider, attachment 
 ~~~text
 AppModule
 ├─ ConfigModule        # validate environment
-├─ SupabaseModule      # public/user-scoped Supabase client
-├─ EncryptionModule    # AES-256-GCM khi seal
+├─ SupabaseModule      # public/user/service-role Supabase client
+├─ EncryptionModule    # AES-256-GCM envelope encryption
 ├─ AuthModule          # register/login/refresh/logout/me
 ├─ LettersModule       # CRUD, dashboard, seal
 └─ AssetsModule        # built-in catalog, signed uploads, letter attachments
@@ -132,7 +134,7 @@ Refresh token cookie có `HttpOnly`, `Secure`, `SameSite=Lax` và path `/api/aut
 
 Backend không dùng service-role client cho user CRUD. `AuthGuard` xác minh Bearer token rồi tạo Supabase client mang JWT của user. Vì vậy PostgreSQL RLS vẫn là authorization boundary cuối cùng.
 
-RLS hiện bảo vệ sáu bảng:
+RLS hiện bảo vệ bảy bảng:
 
 - `profiles`: user chỉ xem/cập nhật profile của mình.
 - `letters`: owner đọc; chỉ draft được insert, update hoặc delete.
@@ -140,8 +142,11 @@ RLS hiện bảo vệ sáu bảng:
 - `delivery_attempts`: owner của parent letter được đọc.
 - `media_assets`: built-in asset được đọc công khai; upload chỉ thuộc owner.
 - `letter_attachments`: owner đọc; chỉ attachment của draft được thay đổi.
+- `sealed_letter_attachments`: không có user policy; chỉ backend service role đọc.
 
-Grants giới hạn column mutation và `seal_letter` chỉ được execute bởi role authenticated.
+Grants giới hạn column mutation. `seal_letter_with_attachments` chỉ được execute
+bởi service role; quyền gọi `seal_letter` cũ đã bị thu hồi để không bypass
+attachment sealing.
 
 ## 7. Data model
 
@@ -151,6 +156,9 @@ erDiagram
     AUTH_USERS ||--o{ LETTERS : owns
     LETTERS ||--o{ SCHEDULED_ACTIONS : schedules
     LETTERS ||--o{ DELIVERY_ATTEMPTS : records
+    LETTERS ||--o{ LETTER_ATTACHMENTS : composes
+    MEDIA_ASSETS ||--o{ LETTER_ATTACHMENTS : supplies
+    LETTER_ATTACHMENTS ||--o| SEALED_LETTER_ATTACHMENTS : snapshots
     SCHEDULED_ACTIONS ||--o{ DELIVERY_ATTEMPTS : produces
 ~~~
 
@@ -162,6 +170,7 @@ erDiagram
 | `delivery_attempts` | Lịch sử lần thử giao qua provider |
 | `media_assets` | Catalog cho built-in asset và upload riêng của user |
 | `letter_attachments` | Liên kết asset với letter, gồm vị trí/scale/rotation |
+| `sealed_letter_attachments` | Snapshot ciphertext, checksum và encryption metadata của attachment đã seal |
 
 Hai bảng scheduling đã có schema nhưng chưa có worker xử lý.
 
@@ -181,22 +190,27 @@ sequenceDiagram
     participant FE as Frontend
     participant API as LettersService
     participant ENC as EncryptionService
-    participant RPC as seal_letter
+    participant STORAGE as sealed-attachments
+    participant RPC as seal_letter_with_attachments
     participant DB as PostgreSQL
 
     FE->>API: POST letters/:id/seal
     API->>DB: đọc owner draft
     API->>API: validate invariant
-    API->>ENC: encrypt plaintext
-    ENC-->>API: AES-256-GCM ciphertext + IV + auth tag
-    API->>RPC: encrypted payload
+    API->>ENC: tạo per-letter key và encrypt text/attachments
+    API->>STORAGE: upload attachment ciphertext
+    API->>RPC: encrypted payload + exact attachment manifest
     RPC->>DB: lock owner row
-    RPC->>DB: clear plaintext, save ciphertext
+    RPC->>DB: validate và lưu sealed attachment metadata
+    RPC->>DB: clear plaintext, save ciphertext + wrapped key
     RPC->>DB: status = scheduled, sealed_at = now
     RPC->>DB: create scheduled_action idempotent
 ~~~
 
-`LETTER_ENCRYPTION_KEY` là base64 key 32 byte và chỉ nằm ở backend environment. Sealed API response không trả content. Tuy nhiên code chưa có decrypt/delivery worker; vì vậy chưa có luồng giao nội dung đã mã hóa tới người nhận.
+`LETTER_ENCRYPTION_KEY` là base64 master key 32 byte và chỉ nằm ở backend
+environment. Mỗi letter dùng random data key riêng; data key được wrap bởi master
+key, còn text và từng attachment dùng nonce AES-GCM riêng. Internal service có
+thể verify checksum và decrypt attachment, nhưng chưa có delivery worker.
 
 ## 9. Security boundary
 
@@ -206,8 +220,10 @@ sequenceDiagram
 - User-scoped Supabase client giữ RLS trong mọi letter query.
 - Database constraints và grants bảo vệ invariant nếu API validation bị bỏ qua.
 - Seal dùng AES-256-GCM và PostgreSQL RPC transaction.
-- Backend environment bắt buộc `SUPABASE_URL`, publishable key và encryption key.
-- Không có service-role key trong runtime hiện tại.
+- Backend environment bắt buộc `SUPABASE_URL`, publishable key, service-role key
+  và encryption key.
+- Service-role client chỉ được dùng cho sealing/decryption backend; user CRUD vẫn
+  dùng user-scoped client và RLS.
 
 Các điểm cần xử lý trước production:
 
@@ -247,7 +263,7 @@ Repository chưa chứa Dockerfile, deployment manifest hay CI workflow. Trạng
 | Email delivery | Chưa có |
 | Built-in asset Storage | Đã có schema/API và script đồng bộ |
 | User draft attachment Storage | Đã có signed upload, private RLS và letter links |
-| Encrypted sealed attachment Storage | Chưa có |
+| Encrypted sealed attachment Storage | Đã có bucket backend-only, envelope encryption và checksum |
 | Payment/payOS | Chưa có |
 | Physical fulfillment | Chưa có |
 | Redis/BullMQ/outbox dispatcher | Chưa có |
@@ -285,12 +301,12 @@ npm run db:lint
 
 Database migration hiện chưa có pgTAP security test trong repository. Cần kiểm tra local Supabase/Docker riêng trước khi khẳng định migration và RLS đã pass end-to-end.
 
-Kết quả kiểm tra trên baseline hiện tại ngày 2026-07-25:
+Kết quả kiểm tra trên working tree ngày 2026-07-26:
 
 - Frontend Jest: 2 suites, 18 tests pass.
 - Frontend ESLint: pass.
 - Frontend Next.js production build: pass; 3 static pages generated.
-- Backend Jest: 2 suites, 5 tests pass.
+- Backend Jest: 4 suites, 12 tests pass.
 - Backend NestJS production build: pass.
 - Frontend `npm ci` báo 3 dependency vulnerabilities mức high; chưa chạy force-fix vì có thể tạo breaking change.
 - Supabase migration/RLS chưa được chạy end-to-end vì Docker/local stack không hoạt động trong lần kiểm tra này.
@@ -303,7 +319,7 @@ Kết quả kiểm tra trên baseline hiện tại ngày 2026-07-25:
 | Next.js static export | Hosting đơn giản | Không có built-in API proxy/runtime rewrite |
 | NestJS API trước Supabase | Giữ encryption key và business rules ở server | Thêm service phải vận hành |
 | User-scoped Supabase client | RLS vẫn thực thi | Phải quản lý access token đúng ở frontend |
-| AES-256-GCM khi seal | Plaintext bị xóa khỏi row sau seal | Key management và delivery decrypt chưa có |
+| Per-letter AES-256-GCM envelope encryption | Text và attachment snapshot dùng key riêng; master key chỉ wrap data key | Key rotation và delivery worker chưa có |
 | Durable `scheduled_actions` table | Không phụ thuộc timer trong process | Chưa có worker nên action chưa được thực thi |
 
 ## 14. Tài liệu liên quan
