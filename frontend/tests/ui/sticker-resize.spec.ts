@@ -1,40 +1,101 @@
-import { readFileSync } from 'node:fs';
+﻿import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 describe('sticker zoom and resize controls', () => {
-  const appScript = readFileSync(
-    join(__dirname, '..', '..', 'public', 'app.js'),
+  const canvasComponent = readFileSync(
+    join(
+      __dirname,
+      '..',
+      '..',
+      'app',
+      'components',
+      'letter-editor',
+      'letter-canvas.tsx',
+    ),
+    'utf8',
+  );
+  const elementComponent = readFileSync(
+    join(
+      __dirname,
+      '..',
+      '..',
+      'app',
+      'components',
+      'letter-editor',
+      'element-renderer.tsx',
+    ),
+    'utf8',
+  );
+  const editorComponent = readFileSync(
+    join(
+      __dirname,
+      '..',
+      '..',
+      'app',
+      'components',
+      'letter-editor',
+      'letter-editor.tsx',
+    ),
     'utf8',
   );
   const stylesheet = readFileSync(
     join(__dirname, '..', '..', 'public', 'styles.css'),
     'utf8',
   );
+  const editorStylesheet = readFileSync(
+    join(__dirname, '..', '..', 'public', 'letter-editor.css'),
+    'utf8',
+  );
 
-  it('renders a proportional resize handle on every corner', () => {
-    expect(appScript).toContain('data-resize-corner="${corner}"');
-    for (const corner of ['nw', 'ne', 'sw', 'se']) {
-      expect(stylesheet).toContain(`.resize-handle-${corner}`);
-    }
+  it('renders proportional resize handles on every corner', () => {
+    expect(canvasComponent).toContain('<Transformer');
+    expect(canvasComponent).toContain('keepRatio');
+    expect(canvasComponent).toContain("'top-left'");
+    expect(canvasComponent).toContain("'bottom-right'");
   });
 
-  it('uses pointer events so resizing works with mouse, pen, and touch', () => {
-    expect(appScript).toContain("handle.addEventListener('pointerdown'");
-    expect(appScript).toContain("window.addEventListener('pointermove'");
-    expect(appScript).toContain("window.addEventListener('pointerup'");
+  it('supports mouse, pen, touch, drag, and transform interactions', () => {
+    expect(elementComponent).toContain('onDragEnd');
+    expect(canvasComponent).toContain('onTouchStart');
+    expect(canvasComponent).toContain('onTransformEnd');
+    expect(canvasComponent).toContain('setPointerCapture');
+    expect(canvasComponent).toContain('onPointerMove={moveContentSticker}');
     expect(stylesheet).toContain('touch-action: none;');
   });
 
-  it('keeps the control UI at a fixed size while the sticker dimensions change', () => {
-    expect(appScript).toContain('width: ${size}px; height: ${size}px;');
-    expect(appScript).not.toContain('transform: translate(-50%, -50%) scale(${scale});');
-    expect(stylesheet).toContain('transform: translate(-50%, -50%);');
-    expect(stylesheet).toContain('.scale-value');
+  it('keeps transformer controls usable while dimensions and zoom change', () => {
+    expect(canvasComponent).toContain('22 / interactionScale');
+    expect(canvasComponent).toContain('anchorSize={transformerAnchorSize}');
+    expect(canvasComponent).toContain('node.scaleX(1)');
+    expect(canvasComponent).toContain('node.scaleY(1)');
   });
 
-  it('keeps zoom inside the supported 40% to 300% range', () => {
-    expect(appScript).toContain('const DECORATION_MIN_SCALE = 0.4;');
-    expect(appScript).toContain('const DECORATION_MAX_SCALE = 3;');
-    expect(appScript).toContain('roundedDecorationScale');
+  it('keeps resize inside the canvas while allowing user stickers in the writing area', () => {
+    expect(canvasComponent).toContain('newBox.width < 24');
+    expect(canvasComponent).toContain("selectedElement.type === 'image'");
+    expect(canvasComponent).toContain("selectedElement.source === 'user'");
+    expect(canvasComponent).toContain(
+      'isOverlappingSafeArea(candidate, theme.safeArea, canvasSize)',
+    );
+    expect(canvasComponent).toContain(
+      'newBox.x + newBox.width > canvasSize.width',
+    );
+  });
+  it('renders the paper without editor framing regions', () => {
+    const stageStyles = editorStylesheet.match(
+      /\.letter-editor-stage \{([\s\S]*?)\}/,
+    )?.[1];
+    const viewportStyles = editorStylesheet.match(
+      /\.letter-canvas-viewport \{([\s\S]*?)\}/,
+    )?.[1];
+
+    expect(editorComponent).not.toContain('letter-editor-stage-head');
+    expect(canvasComponent).not.toContain('dash={[5, 6]}');
+    expect(stageStyles).toContain('border: 0;');
+    expect(stageStyles).toContain('background: transparent;');
+    expect(stageStyles).toContain('box-shadow: none;');
+    expect(viewportStyles).toContain('margin: 0;');
+    expect(viewportStyles).toContain('padding: 0;');
+    expect(viewportStyles).toContain('background: transparent;');
   });
 });

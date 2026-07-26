@@ -1,4 +1,4 @@
-const stickerCategories = [
+﻿const stickerCategories = [
   { id: 'cute', name: 'Dễ thương' },
   { id: 'y2k', name: 'Y2K' },
   { id: 'study', name: 'Học tập' },
@@ -224,7 +224,8 @@ const defaultDraft = {
   letterType: 'online', title: '', content: '', paper: 'ivory', font: 'serif',
   envelope: 'burgundy', recipientMode: 'self', recipientName: '', recipientEmail: '',
   recipientPhone: '', address: '', deliveryDate: futureDate(), deliveryMethod: 'hybrid', note: '',
-  decorations: [],
+  theme: 'none', decorations: [], paperOrientation: null, selectedThemeId: null,
+  userElements: [], lastStep: 1, draftId: '',
 };
 const paperOptions = [
   ['ivory', 'paper-ivory', 'Ngà cổ điển'],
@@ -247,7 +248,85 @@ const envelopeOptions = [
   ['sand', 'envelope-sand', 'Nâu cát'],
   ['charcoal', 'envelope-charcoal', 'Than chì'],
 ];
-let draft = { ...defaultDraft, ...JSON.parse(localStorage.getItem('postdrop-draft') || '{}') };
+const themeOptions = [
+  { id: 'none', name: 'Không dùng theme', description: 'Giữ mẫu giấy đã chọn' },
+  { id: 'cute', name: 'Cute', description: 'Hồng pastel đáng yêu' },
+  { id: 'y2k', name: 'Y2K', description: 'Lấp lánh và cá tính' },
+  { id: 'study', name: 'Study', description: 'Nhẹ nhàng, tập trung' },
+  { id: 'scrapbook', name: 'Scrapbook', description: 'Hoài niệm và thủ công' },
+];const themeDecorationPresets = {
+  cute: [
+    { type: 'cute_heart_pink', x: 10, y: 10, width: 18, rotation: -10 },
+    { type: 'cute_bow_pink', x: 88, y: 10, width: 20, rotation: 9 },
+    { type: 'cute_cherries', x: 8, y: 48, width: 17, rotation: -7 },
+    { type: 'cute_cloud_blue', x: 92, y: 50, width: 19, rotation: 8 },
+    { type: 'cute_envelope_love', x: 12, y: 90, width: 19, rotation: 8 },
+    { type: 'cute_star_silver', x: 88, y: 90, width: 18, rotation: -9 },
+  ],
+  y2k: [
+    { type: 'y2k_star_blue_3d', x: 10, y: 10, width: 19, rotation: -10 },
+    { type: 'y2k_smiley_holographic', x: 89, y: 11, width: 19, rotation: 8 },
+    { type: 'y2k_flame_blue', x: 8, y: 50, width: 18, rotation: -8 },
+    { type: 'y2k_cursor', x: 92, y: 49, width: 16, rotation: 10 },
+    { type: 'y2k_gamepad', x: 12, y: 90, width: 20, rotation: 8 },
+    { type: 'y2k_butterfly_cyber', x: 88, y: 90, width: 19, rotation: -8 },
+  ],
+  study: [
+    { type: 'study_book_stack', x: 11, y: 10, width: 20, rotation: -8 },
+    { type: 'study_coffee_first', x: 89, y: 11, width: 18, rotation: 8 },
+    { type: 'study_pencil', x: 7, y: 50, width: 18, rotation: -12 },
+    { type: 'study_paperclips', x: 93, y: 49, width: 17, rotation: 10 },
+    { type: 'study_plant_potted', x: 12, y: 90, width: 18, rotation: 7 },
+    { type: 'study_star_face', x: 88, y: 90, width: 17, rotation: -8 },
+  ],
+  scrapbook: [
+    { type: 'scrapbook_dried_wildflowers', x: 11, y: 11, width: 21, rotation: -9 },
+    { type: 'scrapbook_stamp_mountain', x: 89, y: 11, width: 18, rotation: 8 },
+    { type: 'scrapbook_film_strip', x: 8, y: 49, width: 19, rotation: -8 },
+    { type: 'scrapbook_mushroom', x: 92, y: 50, width: 17, rotation: 8 },
+    { type: 'scrapbook_olive_leaves', x: 12, y: 89, width: 21, rotation: 9 },
+    { type: 'scrapbook_ticket_pink', x: 88, y: 90, width: 20, rotation: -8 },
+  ],
+};
+const EDITOR_DRAFT_STORAGE_KEY = 'postdrop-letter-editor-draft';
+
+function createDraftId() {
+  return globalThis.crypto?.randomUUID?.() || `draft-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+}
+
+function readStoredDraft() {
+  try {
+    const parsed = JSON.parse(localStorage.getItem('postdrop-draft') || '{}');
+    return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed : {};
+  } catch {
+    return {};
+  }
+}
+
+const storedDraft = readStoredDraft();
+let draft = {
+  ...defaultDraft,
+  ...storedDraft,
+  decorations: Array.isArray(storedDraft.decorations) ? storedDraft.decorations : [],
+  userElements: Array.isArray(storedDraft.userElements) ? storedDraft.userElements : [],
+  draftId: typeof storedDraft.draftId === 'string' && storedDraft.draftId ? storedDraft.draftId : createDraftId(),
+};
+
+const legacyDraftHasContent = Boolean(
+  String(storedDraft.title || '').trim() ||
+  String(storedDraft.content || '').trim() ||
+  (Array.isArray(storedDraft.decorations) && storedDraft.decorations.length),
+);
+if (!Object.prototype.hasOwnProperty.call(storedDraft, 'paperOrientation') && legacyDraftHasContent) {
+  draft.paperOrientation = 'portrait';
+}
+if (draft.paperOrientation === 'portrait' || draft.paperOrientation === 'landscape') {
+  const legacyTheme = typeof storedDraft.theme === 'string' ? storedDraft.theme : 'none';
+  draft.selectedThemeId =
+    typeof storedDraft.selectedThemeId === 'string'
+      ? storedDraft.selectedThemeId
+      : `${legacyTheme}-${draft.paperOrientation}`;
+}
 let currentLetter = null;
 let saveTimer;
 const DECORATION_BASE_SIZE = 64;
@@ -271,14 +350,58 @@ function normalizeDecorationRotation(value) {
   return rounded === 360 ? 0 : rounded;
 }
 
+function flushPersistDraft() {
+  clearTimeout(saveTimer);
+  draft.updatedAt = new Date().toISOString();
+  localStorage.setItem('postdrop-draft', JSON.stringify(draft));
+  const state = document.querySelector('.save-state');
+  if (state) {
+    state.textContent = 'Đã lưu bản nháp';
+    state.classList.remove('saving');
+  }
+}
+
 function persistDraft() {
   const state = document.querySelector('.save-state');
-  if (state) { state.textContent = 'Đang lưu…'; state.classList.add('saving'); }
+  if (state) {
+    state.textContent = 'Đang lưu…';
+    state.classList.add('saving');
+  }
   clearTimeout(saveTimer);
-  saveTimer = setTimeout(() => {
-    localStorage.setItem('postdrop-draft', JSON.stringify(draft));
-    if (state) { state.textContent = 'Đã lưu bản nháp'; state.classList.remove('saving'); }
-  }, 500);
+  saveTimer = setTimeout(flushPersistDraft, 500);
+}
+
+function hasMeaningfulDraft() {
+  return Boolean(
+    draft.paperOrientation ||
+    String(draft.title || '').trim() ||
+    String(draft.content || '').trim() ||
+    (Array.isArray(draft.userElements) && draft.userElements.length) ||
+    (Array.isArray(draft.decorations) && draft.decorations.length) ||
+    String(draft.recipientName || '').trim() ||
+    Number(draft.lastStep || 1) > 1,
+  );
+}
+
+function resetDraft(letterType = 'online') {
+  const previousDraftId = draft.draftId;
+  clearTimeout(saveTimer);
+  localStorage.removeItem('postdrop-draft');
+  localStorage.removeItem(EDITOR_DRAFT_STORAGE_KEY);
+  draft = {
+    ...defaultDraft,
+    letterType,
+    deliveryDate: futureDate(),
+    decorations: [],
+    userElements: [],
+    draftId: createDraftId(),
+  };
+  flushPersistDraft();
+  window.dispatchEvent(
+    new CustomEvent('postdrop-draft-reset', {
+      detail: { previousDraftId, draftId: draft.draftId },
+    }),
+  );
 }
 
 function toast(message, type = '') {
@@ -288,6 +411,56 @@ function toast(message, type = '') {
   toastRegion.appendChild(element);
   setTimeout(() => element.remove(), 3500);
 }
+
+window.addEventListener('postdrop-editor-change', (event) => {
+  const next = event.detail || {};
+  if (next.draftId && next.draftId !== draft.draftId) return;
+  if (typeof next.letterContent === 'string') draft.content = next.letterContent;
+  if (typeof next.letterTitle === 'string') draft.title = next.letterTitle;
+  if (next.letterFont === 'serif' || next.letterFont === 'modern' || next.letterFont === 'hand') {
+    draft.font = next.letterFont;
+  }
+  if (next.paperOrientation === 'portrait' || next.paperOrientation === 'landscape') {
+    draft.paperOrientation = next.paperOrientation;
+  }
+  if (typeof next.selectedThemeId === 'string' || next.selectedThemeId === null) {
+    draft.selectedThemeId = next.selectedThemeId;
+    if (next.selectedThemeId) draft.theme = next.selectedThemeId;
+  }
+  if (Array.isArray(next.userElements)) draft.userElements = next.userElements;
+  persistDraft();
+});
+
+window.addEventListener('postdrop-paper-orientation-selected', (event) => {
+  const next = event.detail || {};
+  if (next.draftId && next.draftId !== draft.draftId) return;
+  if (next.paperOrientation !== 'portrait' && next.paperOrientation !== 'landscape') return;
+  draft.paperOrientation = next.paperOrientation;
+  draft.selectedThemeId =
+    typeof next.selectedThemeId === 'string' ? next.selectedThemeId : `none-${next.paperOrientation}`;
+  draft.theme = draft.selectedThemeId;
+  draft.lastStep = 3;
+  flushPersistDraft();
+  location.hash = '/create/3';
+});
+
+window.addEventListener('pagehide', flushPersistDraft);
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'hidden') flushPersistDraft();
+});
+
+window.addEventListener('postdrop-editor-saved', () => {
+  const state = document.querySelector('.save-state');
+  if (state) {
+    state.textContent = 'Đã lưu bản nháp';
+    state.classList.remove('saving');
+  }
+});
+
+window.addEventListener('postdrop-editor-toast', (event) => {
+  const detail = event.detail || {};
+  if (detail.message && detail.type === 'error') toast(detail.message, 'error');
+});
 
 function openModal({ title, message, confirm = 'Xác nhận', onConfirm }) {
   modalRoot.innerHTML = `<div class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="modal-title"><div class="modal"><h2 id="modal-title">${escapeHtml(title)}</h2><p>${escapeHtml(message)}</p><div class="modal-actions"><button class="button button-ghost" data-modal-close>Quay lại</button><button class="button button-primary" data-modal-confirm>${escapeHtml(confirm)}</button></div></div></div>`;
@@ -299,11 +472,11 @@ function brand() { return `<a class="brand" href="#/" aria-label="PostDrop — T
 function button(label, route, kind = 'primary', iconName = '') { return `<a class="button button-${kind}" href="#${route}">${label}${iconName ? icon(iconName) : ''}</a>`; }
 
 function siteHeader() {
-  return `<header class="site-header"><div class="container nav">${brand()}<nav class="nav-links" aria-label="Điều hướng chính"><a href="#/" data-scroll="how">Cách hoạt động</a><a href="#/" data-scroll="services">Mẫu thư</a><a href="#/" data-scroll="pricing">Bảng giá</a><a href="#/" data-scroll="trust">Dành cho tổ chức</a></nav><div class="nav-actions"><a class="text-button" href="#/login">Đăng nhập</a>${button('Viết thư ngay', '/create/1')}<button class="menu-toggle" aria-label="Mở menu">${icon('menu')}</button></div></div></header>`;
+  return `<header class="site-header"><div class="container nav">${brand()}<nav class="nav-links" aria-label="Điều hướng chính"><a href="#/" data-scroll="how">Cách hoạt động</a><a href="#/" data-scroll="services">Mẫu thư</a><a href="#/" data-scroll="pricing">Bảng giá</a><a href="#/" data-scroll="trust">Dành cho tổ chức</a></nav><div class="nav-actions"><a class="text-button" href="#/login">Đăng nhập</a>${button('Viết thư ngay', '/create/1?new=1')}<button class="menu-toggle" aria-label="Mở menu">${icon('menu')}</button></div></div></header>`;
 }
 
 function appHeader() {
-  return `<header class="app-header"><div class="container app-header-inner">${brand()}<div class="app-header-actions"><a class="button button-primary" href="#/create/1">${icon('plus')}Tạo lá thư mới</a><button class="icon-button" aria-label="Thông báo">${icon('bell')}</button><a class="avatar" href="#/dashboard" aria-label="Tài khoản Minh Anh">MA</a></div></div></header>`;
+  return `<header class="app-header"><div class="container app-header-inner">${brand()}<div class="app-header-actions"><a class="button button-primary" href="#/create/1?new=1">${icon('plus')}Tạo lá thư mới</a><button class="icon-button" aria-label="Thông báo">${icon('bell')}</button><a class="avatar" href="#/dashboard" aria-label="Tài khoản Minh Anh">MA</a></div></div></header>`;
 }
 
 function journeyStep(iconName, title, text) { return `<div class="journey-step"><div class="step-icon">${icon(iconName)}</div><h3>${title}</h3><p>${text}</p></div>`; }
@@ -323,20 +496,20 @@ function heroFlorals() {
 
 function renderLanding() {
   app.innerHTML = `<div class="page-shell">${siteHeader()}<main id="main-content">
-    <section class="hero hero-invitation"><div class="invitation-frame" aria-hidden="true"><span class="frame-corner frame-corner-tl"></span><span class="frame-corner frame-corner-tr"></span><span class="frame-corner frame-corner-bl"></span><span class="frame-corner frame-corner-br"></span></div>${heroFlorals()}${landingPlane()}<div class="hero-content"><div class="invitation-monogram" aria-hidden="true"><span>P</span></div><span class="eyebrow">POSTDROP · THƯ GỬI ĐẾN TƯƠNG LAI</span><h1 class="hero-handwritten"><span>Một lá thư từ chính bạn</span><span>của những năm trước.</span></h1><div class="hero-floral-divider" aria-hidden="true"><span></span><i></i><span></span></div><p>Viết hôm nay, PostDrop sẽ lưu giữ và gửi lá thư đến đúng ngày bạn lựa chọn.</p><div class="hero-actions">${button('Viết thư cho tương lai', '/create/1', 'primary', 'arrowRight')}${button('Gửi thư viết tay', '/create/1?type=handwritten', 'secondary')}</div></div></section>
+    <section class="hero hero-invitation"><div class="invitation-frame" aria-hidden="true"><span class="frame-corner frame-corner-tl"></span><span class="frame-corner frame-corner-tr"></span><span class="frame-corner frame-corner-bl"></span><span class="frame-corner frame-corner-br"></span></div>${heroFlorals()}${landingPlane()}<div class="hero-content"><div class="invitation-monogram" aria-hidden="true"><span>P</span></div><span class="eyebrow">POSTDROP · THƯ GỬI ĐẾN TƯƠNG LAI</span><h1 class="hero-handwritten"><span>Một lá thư từ chính bạn</span><span>của những năm trước.</span></h1><div class="hero-floral-divider" aria-hidden="true"><span></span><i></i><span></span></div><p>Viết hôm nay, PostDrop sẽ lưu giữ và gửi lá thư đến đúng ngày bạn lựa chọn.</p><div class="hero-actions">${button('Viết thư cho tương lai', '/create/1?new=1', 'primary', 'arrowRight')}${button('Gửi thư viết tay', '/create/1?type=handwritten&new=1', 'secondary')}${hasMeaningfulDraft() ? button('Tiếp tục bản nháp', '/create/resume', 'secondary', 'arrowRight') : ''}</div></div></section>
     <section class="letter-section" id="how"><div class="container"><div class="section-head"><span class="chapter">CHƯƠNG 01</span><h2>Cách PostDrop hoạt động</h2><p>Một nghi thức nhỏ hôm nay, một cuộc gặp gỡ đặc biệt trong tương lai.</p></div><div class="journey">${journeyStep('pen','Viết thư','Dành vài phút để viết điều bạn muốn nhớ.')}${journeyStep('seal','Niêm phong','Xác nhận nội dung và chọn ngày gặp lại.')}${journeyStep('archive','Lưu giữ','Chúng tôi bảo quản an toàn suốt hành trình.')}${journeyStep('truck','Giao đúng hẹn','Lá thư đến tay vào đúng ngày đã chọn.')}</div></div></section>
-    <section class="letter-section" id="services"><div class="container"><div class="section-head"><span class="chapter">CHƯƠNG 02</span><h2>Chọn cách bạn muốn gửi</h2><p>Dù là những dòng chữ trên màn hình hay nét mực trên giấy, cảm xúc vẫn được giữ nguyên vẹn.</p></div><div class="service-grid"><a href="#/create/1" class="service-card"><div class="service-art"><div class="paper-stack"></div></div><span class="eyebrow">TRỰC TUYẾN</span><h3>Viết thư trực tuyến</h3><p>Soạn thư trong không gian yên tĩnh, chọn giấy và phong bì, chúng tôi sẽ làm phần còn lại.</p><div class="service-meta"><span>5–10 phút</span><span>Từ 29.000đ</span></div></a><a href="#/create/1?type=handwritten" class="service-card"><div class="service-art"><div class="mailbox"></div></div><span class="eyebrow">VIẾT TAY</span><h3>Gửi thư viết tay</h3><p>Gửi lá thư thật đến PostDrop. Chúng tôi số hóa, bảo quản và giao lại đúng hẹn.</p><div class="service-meta"><span>3–5 ngày gửi đến</span><span>Từ 119.000đ</span></div></a></div></div></section>
+    <section class="letter-section" id="services"><div class="container"><div class="section-head"><span class="chapter">CHƯƠNG 02</span><h2>Chọn cách bạn muốn gửi</h2><p>Dù là những dòng chữ trên màn hình hay nét mực trên giấy, cảm xúc vẫn được giữ nguyên vẹn.</p></div><div class="service-grid"><a href="#/create/1?new=1" class="service-card"><div class="service-art"><div class="paper-stack"></div></div><span class="eyebrow">TRỰC TUYẾN</span><h3>Viết thư trực tuyến</h3><p>Soạn thư trong không gian yên tĩnh, chọn giấy và phong bì, chúng tôi sẽ làm phần còn lại.</p><div class="service-meta"><span>5–10 phút</span><span>Từ 29.000đ</span></div></a><a href="#/create/1?type=handwritten&new=1" class="service-card"><div class="service-art"><div class="mailbox"></div></div><span class="eyebrow">VIẾT TAY</span><h3>Gửi thư viết tay</h3><p>Gửi lá thư thật đến PostDrop. Chúng tôi số hóa, bảo quản và giao lại đúng hẹn.</p><div class="service-meta"><span>3–5 ngày gửi đến</span><span>Từ 119.000đ</span></div></a></div></div></section>
     <section class="letter-section"><div class="container"><div class="section-head"><span class="chapter">NHỮNG DỊP ĐỂ NHỚ</span><h2>Đánh dấu điều quan trọng</h2></div><div class="occasion-row"><span class="occasion">Sinh nhật</span><span class="occasion">Tốt nghiệp</span><span class="occasion">Kỷ niệm</span><span class="occasion">Năm mới</span><span class="occasion">Cột mốc sự nghiệp</span></div></div></section>
     <section class="letter-section" id="trust"><div class="container"><div class="section-head"><span class="chapter">CHƯƠNG 03</span><h2>Một lời hứa được gìn giữ</h2><p>Niềm tin của bạn được bảo vệ bằng những lớp an toàn rõ ràng, từ hôm nay đến ngày giao.</p></div><div class="trust-grid">${trustItem('database','Số hóa dự phòng','Bản sao được mã hóa và lưu tách biệt để phòng sự cố.')}${trustItem('shield','Bảo quản an toàn','Thư vật lý được lưu tại môi trường kiểm soát độ ẩm.')}${trustItem('map','Xác minh địa chỉ','Chúng tôi nhắc bạn xác nhận địa chỉ trước ngày giao 30 ngày.')}${trustItem('truck','Theo dõi hành trình','Mọi cột mốc quan trọng đều được cập nhật rõ ràng.')}</div></div></section>
     <section class="letter-section" id="pricing"><div class="container"><div class="section-head"><span class="chapter">CHƯƠNG 04</span><h2>Một mức giá cho mỗi cách gửi</h2><p>Thanh toán một lần. Không có phí ẩn trong suốt thời gian lưu giữ.</p></div><div class="pricing-grid">${priceCard('Email','29.000đ',['Gửi qua email đúng hẹn','Lưu giữ đến 5 năm','1 lần nhắc xác nhận'])}${priceCard('Physical','119.000đ',['In trên giấy cao cấp','Phong bì và niêm phong','Theo dõi giao hàng'])}${priceCard('Hybrid','149.000đ',['Bao gồm Email + Physical','Bản số hóa dự phòng','Ưu tiên hỗ trợ'],true)}</div></div></section>
     <section class="letter-section"><div class="container"><div class="quote-card"><blockquote>“Tôi đã quên mình từng lo lắng nhiều đến thế. Lá thư ấy giống như một cái ôm đến muộn, nhưng đúng lúc.”</blockquote><cite>Hà My · Nhận thư sau 3 năm</cite></div></div></section>
     <section class="letter-section"><div class="container"><div class="section-head"><span class="chapter">NHỮNG ĐIỀU BẠN CÓ THỂ HỎI</span><h2>Câu hỏi thường gặp</h2></div><div class="faq-list">${faq('Nội dung lá thư có được bảo mật không?','Có. Nội dung được mã hóa khi lưu trữ. Sau khi niêm phong, ngay cả bạn cũng không thể mở lại trước ngày đã chọn.')}${faq('Tôi có thể đổi địa chỉ nhận thư không?','Có. PostDrop sẽ chủ động nhắc bạn xác nhận hoặc cập nhật địa chỉ trước ngày giao 30 ngày.')}${faq('Nếu tôi đổi email hoặc số điện thoại thì sao?','Bạn có thể cập nhật thông tin liên hệ bất kỳ lúc nào trong trang chi tiết lá thư.')}${faq('Tôi có thể hủy sau khi niêm phong không?','Bạn có thể liên hệ hỗ trợ để hủy lịch giao. Nội dung đã niêm phong vẫn không thể chỉnh sửa.')}</div></div></section>
-    <section class="final-cta"><span class="eyebrow">PHẦN KẾT</span><h2>Bạn muốn gửi điều gì cho mình trong tương lai?</h2><p>Có những điều chỉ thời gian mới giúp chúng ta hiểu được.</p>${button('Viết lá thư của tôi', '/create/1', 'primary', 'arrowRight')}<div class="final-seal" aria-hidden="true">P</div></section>
+    <section class="final-cta"><span class="eyebrow">PHẦN KẾT</span><h2>Bạn muốn gửi điều gì cho mình trong tương lai?</h2><p>Có những điều chỉ thời gian mới giúp chúng ta hiểu được.</p>${button('Viết lá thư của tôi', '/create/1?new=1', 'primary', 'arrowRight')}<div class="final-seal" aria-hidden="true">P</div></section>
   </main>${footer()}</div>`;
   bindLanding();
 }
 
-function priceCard(name, price, features, featured = false) { return `<article class="price-card ${featured ? 'featured' : ''}">${featured ? '<span class="mini-stamp">ĐƯỢC YÊU THÍCH</span>' : ''}<span class="eyebrow">GÓI ${name.toUpperCase()}</span><div class="price">${price} <small>/ lá thư</small></div><ul class="feature-list">${features.map((item) => `<li>${item}</li>`).join('')}</ul>${button(`Chọn gói ${name}`, '/create/1', featured ? 'primary' : 'secondary')}</article>`; }
+function priceCard(name, price, features, featured = false) { return `<article class="price-card ${featured ? 'featured' : ''}">${featured ? '<span class="mini-stamp">ĐƯỢC YÊU THÍCH</span>' : ''}<span class="eyebrow">GÓI ${name.toUpperCase()}</span><div class="price">${price} <small>/ lá thư</small></div><ul class="feature-list">${features.map((item) => `<li>${item}</li>`).join('')}</ul>${button(`Chọn gói ${name}`, '/create/1?new=1', featured ? 'primary' : 'secondary')}</article>`; }
 function faq(question, answer) { return `<div class="faq-item"><button class="faq-question" aria-expanded="false">${question}<span>+</span></button><p class="faq-answer">${answer}</p></div>`; }
 function footer() { return `<footer class="footer"><div class="container"><div class="footer-grid"><div>${brand()}<p style="margin-top:16px;max-width:270px">Gửi một phần của hôm nay đến đúng người, vào đúng ngày trong tương lai.</p></div><div><h4>SẢN PHẨM</h4><div class="footer-links"><a href="#/" data-scroll="how">Cách hoạt động</a><a href="#/" data-scroll="services">Loại thư</a><a href="#/" data-scroll="pricing">Bảng giá</a></div></div><div><h4>HỖ TRỢ</h4><div class="footer-links"><a href="#/">Câu hỏi thường gặp</a><a href="#/">Liên hệ</a><a href="#/">Theo dõi thư</a></div></div><div><h4>PHÁP LÝ</h4><div class="footer-links"><a href="#/">Quyền riêng tư</a><a href="#/">Điều khoản</a><a href="#/">Bảo mật</a></div></div></div><div class="copyright">© 2026 PostDrop. Mọi quyền được bảo lưu.<span>Được tạo ra để những điều quan trọng không bị lãng quên.</span></div></div></footer>`; }
 
@@ -355,36 +528,63 @@ const steps = ['Loại thư', 'Nội dung', 'Thiết kế', 'Giao thư', 'Xác n
 function stepper(step) { return `<div class="stepper" aria-label="Tiến trình tạo thư">${steps.map((name, i) => `<div class="stepper-item ${i + 1 === step ? 'active' : i + 1 < step ? 'done' : ''}"><span class="stepper-dot">${i + 1 < step ? '✓' : i + 1}</span><span>${name}</span></div>`).join('')}</div>`; }
 
 function renderBuilder(step = 1) {
+  steps[1] = 'Lo\u1ea1i gi\u1ea5y';
+  steps[2] = 'Vi\u1ebft & thi\u1ebft k\u1ebf';
   if (location.hash.includes('type=handwritten')) draft.letterType = 'handwritten';
+  if (step >= 3 && draft.paperOrientation !== 'portrait' && draft.paperOrientation !== 'landscape') {
+    location.hash = '/create/2';
+    return;
+  }
+  draft.lastStep = Math.max(Number(draft.lastStep || 1), step);
+  persistDraft();
   app.innerHTML = `<div class="app-page">${appHeader()}<main id="main-content" class="container builder-wrap"><div class="builder-head"><div><span class="eyebrow">BƯỚC ${step} / 5 — ${steps[step - 1].toUpperCase()}</span><h1>${stepTitle(step)}</h1><p>${stepDescription(step)}</p></div><span class="save-state">Đã lưu bản nháp</span></div>${stepper(step)}<div id="builder-content">${renderStep(step)}</div></main></div>`;
   bindBuilder(step);
 }
 
-function stepTitle(step) { return ['Bạn muốn gửi lá thư theo cách nào?','Viết điều bạn muốn gặp lại','Tạo dáng vẻ cho lá thư','Lá thư sẽ tìm đến ai?','Kiểm tra trước khi niêm phong'][step - 1]; }
-function stepDescription(step) { return ['Chọn một cách phù hợp. Bạn vẫn có thể thay đổi ở bước sau.','Hãy viết tự nhiên. Bản nháp được tự động lưu trên thiết bị này.','Chỉ vài lựa chọn vừa đủ để lá thư mang dấu ấn của bạn.','Thông tin này giúp PostDrop giao lá thư đúng người, đúng ngày.','Sau khi niêm phong, nội dung sẽ không thể chỉnh sửa.'][step - 1]; }
+function stepTitle(step) { return ['Bạn muốn gửi lá thư theo cách nào?','Bạn muốn viết thư với loại giấy nào?','Viết điều bạn muốn gặp lại','Lá thư sẽ tìm đến ai?','Kiểm tra trước khi niêm phong'][step - 1]; }
+function stepDescription(step) { return ['Chọn một cách phù hợp. Bạn vẫn có thể thay đổi ở bước sau.','Bạn vẫn có thể đổi loại giấy sau trong trình chỉnh sửa.','Viết trực tiếp trên trang thư rồi chọn theme và trang trí theo cách của bạn.','Thông tin này giúp PostDrop giao lá thư đúng người, đúng ngày.','Sau khi niêm phong, nội dung sẽ không thể chỉnh sửa.'][step - 1]; }
 
 function renderSwatches(group, options) {
   return options.map(([value, colorClass, label]) => swatch(group, value, colorClass, label)).join('');
 }
 
-function renderDesignStep() {
-  return `<div class="workspace"><section class="panel design-panel">
-    <h2>Thiết kế lá thư</h2>
-    <p class="panel-intro">Chọn chất giấy và màu phong bì phù hợp với câu chuyện bạn muốn gửi.</p>
-    <div class="field"><label>Mẫu giấy · 8 lựa chọn</label><div class="swatches design-swatches">${renderSwatches('paper', paperOptions)}</div></div>
-    <div class="field"><label>Kiểu chữ trong thư</label><div class="segmented">${segment('font','serif','Editorial')}${segment('font','modern','Hiện đại')}${segment('font','hand','Viết tay')}</div></div>
-    <div class="field"><label>Màu phong bì · 9 lựa chọn</label><div class="swatches design-swatches">${renderSwatches('envelope', envelopeOptions)}</div></div>
-    <div class="field">
-      <label>Sticker</label>
-      <div class="sticker-library-wrapper">${renderStickerLibrary()}</div>
+function renderThemePicker() {
+  return `<div class="theme-picker">${themeOptions.map((theme) => {
+    const selected = draft.theme === theme.id;
+    return `<button type="button" class="theme-card theme-card-${theme.id} ${selected ? 'selected' : ''}" data-option="theme" data-value="${theme.id}" aria-pressed="${selected}">
+      <span class="theme-card-preview" aria-hidden="true">${theme.id === 'none' ? '<span class="theme-empty-mark">Aa</span>' : ''}</span>
+      <span class="theme-card-copy"><strong>${theme.name}</strong><small>${theme.description}</small></span>
+      <span class="theme-card-check" aria-hidden="true">&#10003;</span>
+    </button>`;
+  }).join('')}</div>`;
+}
+function renderPaperOrientationStep() {
+  return `<div class="paper-orientation-step">
+    <div id="paper-orientation-root" data-draft-id="${escapeHtml(draft.draftId)}" aria-live="polite">
+      <div class="skeleton" aria-label="Loading paper options"></div>
     </div>
-  </section><aside class="preview-panel">${letterPreview()}</aside></div>${builderActions(3)}`;
+    <div class="builder-actions paper-orientation-actions">
+      <span></span>
+      <button class="button button-secondary" data-back>${icon('arrowLeft')}Quay l\u1ea1i</button>
+    </div>
+  </div>`;
+}
+
+function renderDesignStep() {
+  return `<div class="letter-editor-step">
+    <section class="design-basics-bar" aria-label="Tùy chọn mẫu giấy và màu phong bì">
+      <div class="field"><label>Mẫu giấy · 8 lựa chọn</label><div class="swatches design-swatches">${renderSwatches('paper', paperOptions)}</div></div>
+      <div class="field"><label>Màu phong bì · 9 lựa chọn</label><div class="swatches design-swatches">${renderSwatches('envelope', envelopeOptions)}</div></div>
+    </section>
+    <div id="letter-editor-root" data-editor-instance="${escapeHtml(draft.draftId)}-${draft.paperOrientation}" aria-live="polite"></div>
+  </div>${builderActions(3)}`;
 }
 
 function renderStep(step) {
+  if (step === 2) return renderPaperOrientationStep();
   if (step === 3) return renderDesignStep();
   if (step === 1) return `<div class="panel"><div class="choice-grid">${typeCard('online','pen','Viết thư trực tuyến','Soạn thư ngay trên PostDrop, chọn thiết kế và chúng tôi sẽ in hoặc gửi email.','5–10 phút','Từ 29.000đ')}${typeCard('handwritten','mail','Gửi thư viết tay','Bạn viết trên giấy và gửi đến PostDrop. Chúng tôi số hóa rồi bảo quản nguyên bản.','3–5 ngày','Từ 119.000đ')}</div>${builderActions(step)}</div>`;
-  if (step === 2) return `<div class="workspace"><section class="panel"><h2>Nội dung lá thư</h2><p class="panel-intro">Không cần hoàn hảo. Chỉ cần là lời bạn thật sự muốn gửi.</p>${field('title','Tiêu đề lá thư',draft.title,'Ví dụ: Gửi mình của tuổi 25')}<div class="field"><label for="content">Nội dung</label><textarea id="content" data-draft="content" placeholder="Gửi mình của tương lai,&#10;&#10;Hôm nay mình đang…">${escapeHtml(draft.content)}</textarea><div class="field-hint"><span id="word-count">${wordCount(draft.content)}</span> từ · Gợi ý: một lá thư ý nghĩa thường có 150–500 từ</div><div class="field-error" data-error="content"></div></div><button class="button button-secondary" type="button" data-upload>${icon('upload')} Thêm một tấm ảnh</button></section><aside class="preview-panel">${letterPreview()}</aside></div>${builderActions(step)}`;
+  if (step === 2) return renderPaperOrientationStep();
   if (step === 4) return `<div class="workspace"><section class="panel"><h2>Thông tin người nhận</h2><div class="field"><label>Gửi lá thư này cho</label><div class="segmented">${segment('recipientMode','self','Chính tôi')}${segment('recipientMode','other','Người khác')}</div></div><div class="field-row">${field('recipientName','Họ tên người nhận',draft.recipientName,'Nguyễn Minh Anh')}${field('recipientEmail','Email',draft.recipientEmail,'minhanh@example.com','email')}</div><div class="field-row">${field('recipientPhone','Số điện thoại',draft.recipientPhone,'0901 234 567','tel')}${field('deliveryDate','Ngày dự kiến giao',draft.deliveryDate,'','date')}</div><div id="date-message" class="date-message">${dateMessage()}</div><div class="field"><label>Hình thức nhận</label><div class="segmented">${segment('deliveryMethod','email','Email')}${segment('deliveryMethod','physical','Thư vật lý')}${segment('deliveryMethod','hybrid','Cả hai')}</div></div><div class="field" id="address-field"><label for="address">Địa chỉ nhận</label><input id="address" data-draft="address" value="${escapeHtml(draft.address)}" placeholder="Số nhà, tên đường, quận/huyện, tỉnh/thành"/><div class="field-error" data-error="address"></div></div><div class="field"><label for="note">Ghi chú giao hàng <span style="font-weight:400;color:var(--muted)">(không bắt buộc)</span></label><textarea id="note" data-draft="note" style="min-height:95px" placeholder="Ví dụ: Gọi trước khi giao">${escapeHtml(draft.note)}</textarea></div></section><aside class="panel"><h2>Ngày gặp lại</h2><p class="panel-intro">Ngày bạn chọn sẽ trở thành một cột mốc. PostDrop sẽ đồng hành để lá thư không bị lạc đường.</p><div class="mini-envelope" style="width:100%;height:185px;aspect-ratio:auto"><span>${draft.deliveryDate ? formatDate(draft.deliveryDate) : 'Chưa chọn ngày'}</span></div><div class="info-note" style="margin-top:24px">${icon('info')}<span>PostDrop sẽ gửi yêu cầu xác nhận địa chỉ trước ngày giao 30 ngày.</span></div></aside></div>${builderActions(step)}`;
   return `<div class="workspace"><section class="panel"><h2>Tóm tắt lá thư</h2><div class="envelope-preview" style="height:190px"><div class="mini-envelope" style="background:${envelopeColor()}"><span>${escapeHtml(draft.title || 'Lá thư của tôi')}</span></div></div><div class="summary-list">${summaryRow('Tiêu đề',draft.title || 'Chưa đặt tên')}${summaryRow('Người nhận',draft.recipientName || 'Chưa điền')}${summaryRow('Ngày gửi',draft.deliveryDate ? formatDate(draft.deliveryDate) : 'Chưa chọn')}${summaryRow('Hình thức',deliveryLabel())}${summaryRow('Mẫu phong bì',labelize(draft.envelope))}</div><div class="sealed-message">${icon('seal')} <strong>Nội dung sắp được niêm phong.</strong><br/>Bạn sẽ gặp lại những dòng chữ này vào đúng ngày đã chọn.</div></section><aside class="panel"><h2>Chi tiết thanh toán</h2><p class="panel-intro">Thanh toán một lần cho toàn bộ hành trình.</p><div class="summary-list">${summaryRow('Phí in',draft.deliveryMethod === 'email' ? '0đ' : '35.000đ')}${summaryRow('Phí lưu giữ','45.000đ')}${summaryRow('Phí giao hàng',draft.deliveryMethod === 'email' ? '0đ' : '39.000đ')}<div class="summary-row total-row"><span>Tổng thanh toán</span><strong>${totalPrice()}</strong></div></div><label class="seal-check"><input id="seal-confirm" type="checkbox"/><span>Tôi hiểu rằng sau khi niêm phong, nội dung lá thư sẽ không thể chỉnh sửa.</span></label><div class="field-error" data-error="seal"></div>${builderActions(step, true)}</aside></div>`;
 }
@@ -393,11 +593,13 @@ function typeCard(type, iconName, title, description, time, price) { const selec
 function field(key, label, value, placeholder, type = 'text') { return `<div class="field"><label for="${key}">${label}</label><input id="${key}" type="${type}" data-draft="${key}" value="${escapeHtml(value)}" placeholder="${escapeHtml(placeholder)}" ${type === 'date' ? `min="${new Date().toISOString().slice(0,10)}"` : ''}/><div class="field-error" data-error="${key}"></div></div>`; }
 function swatch(group, value, colorClass, label) {
   const selected = draft[group] === value;
-  return `<button class="swatch ${colorClass} ${selected ? 'selected' : ''}" data-option="${group}" data-value="${value}" aria-label="${label}" aria-pressed="${selected}" title="${label}"><span class="swatch-color" aria-hidden="true"></span><span class="swatch-label">${label}</span></button>`;
+  return `<button class="swatch ${colorClass} ${selected ? 'selected' : ''}" data-option="${group}" data-value="${value}" aria-label="${label}" aria-pressed="${selected}" title="${label}"><span class="swatch-color" aria-hidden="true"></span></button>`;
 }
 function segment(group, value, label) { return `<button class="segment ${draft[group] === value ? 'selected' : ''}" data-option="${group}" data-value="${value}" type="button">${label}</button>`; }
 function letterPreview() {
-  const content = (draft.content || 'Những dòng chữ của bạn sẽ xuất hiện ở đây, như một lời nhắn đang chờ thời gian mang đi…').normalize('NFC');
+  const selectedTheme = themeOptions.some((theme) => theme.id === draft.theme) ? draft.theme : 'none';
+  const hasTheme = selectedTheme !== 'none';
+  const themeDecorations = (themeDecorationPresets[selectedTheme] || []).map((decoration) => `<img class="theme-decoration" src="${getStickerSrc(decoration.type)}" alt="" aria-hidden="true" style="--theme-x: ${decoration.x}%; --theme-y: ${decoration.y}%; --theme-width: ${decoration.width}%; --theme-rotation: ${decoration.rotation}deg;" />`).join('');  const content = (draft.content || 'Những dòng chữ của bạn sẽ xuất hiện ở đây, như một lời nhắn đang chờ thời gian mang đi…').normalize('NFC');
   const decos = (draft.decorations || []).map((deco) => {
     const type = deco.type === 'sparkles' ? 'postmark' : deco.type;
     const scale = roundedDecorationScale(deco.scale || 1);
@@ -421,9 +623,13 @@ function letterPreview() {
       <span>Khung xem trước</span>
       <small>Kéo thả, phóng to / thu nhỏ và xoay sticker trực tiếp trên mặt giấy</small>
     </div>
-    <div class="letter-preview paper-${draft.paper} font-${draft.font}">
+    <div class="letter-preview paper-${draft.paper} font-${draft.font}${hasTheme ? ` has-theme theme-${selectedTheme}` : ''}">
+      ${hasTheme ? '<div class="letter-theme-surface" aria-hidden="true"></div>' : ''}
+      ${hasTheme ? `<div class="theme-decoration-layer" aria-hidden="true">${themeDecorations}</div>` : ''}
+      <div class="letter-content">
       <h3>${escapeHtml((draft.title || 'Lá thư của tôi').normalize('NFC'))}</h3>
       <div class="preview-body">${escapeHtml(content)}</div>
+      </div>
       ${decos}
     </div>
   </div>`;
@@ -456,10 +662,26 @@ function bindBuilder(step) {
     if (control.id === 'deliveryDate') { document.querySelector('#date-message').textContent = dateMessage(); }
     persistDraft();
   }));
-  document.querySelectorAll('[data-option]').forEach((control) => control.onclick = () => { draft[control.dataset.option] = control.dataset.value; persistDraft(); renderBuilder(step); });
-  document.querySelector('[data-back]')?.addEventListener('click', () => { location.hash = `/create/${step - 1}`; });
+  document.querySelectorAll('[data-option]').forEach((control) => control.onclick = () => {
+    const group = control.dataset.option;
+    draft[group] = control.dataset.value;
+    persistDraft();
+    if (step === 3) {
+      document.querySelectorAll(`[data-option="${group}"]`).forEach((item) => {
+        const selected = item.dataset.value === control.dataset.value;
+        item.classList.toggle('selected', selected);
+        item.setAttribute('aria-pressed', String(selected));
+      });
+      return;
+    }
+    renderBuilder(step);
+  });
+  document.querySelector('[data-back]')?.addEventListener('click', () => {
+    flushPersistDraft();
+    location.hash = `/create/${step - 1}`;
+  });
   document.querySelector('[data-next]')?.addEventListener('click', () => nextStep(step));
-  document.querySelector('[data-save-later]')?.addEventListener('click', () => { persistDraft(); toast('Bản nháp đã được lưu. Bạn có thể quay lại bất cứ lúc nào.', 'success'); setTimeout(() => location.hash = '/dashboard', 700); });
+  document.querySelector('[data-save-later]')?.addEventListener('click', () => { flushPersistDraft(); toast('Bản nháp đã được lưu. Bạn có thể quay lại bất cứ lúc nào.', 'success'); setTimeout(() => location.hash = '/dashboard', 700); });
   document.querySelector('[data-upload]')?.addEventListener('click', () => toast('Ảnh sẽ được tối ưu và đính kèm vào lá thư (bản prototype).'));
 
   if (step === 3) {
@@ -786,11 +1008,21 @@ function setError(key, message) {
 }
 
 async function nextStep(step) {
-  if (step === 2) {
-    let valid = true;
-    if (draft.title.trim().length < 2) { setError('title','Hãy đặt một tiêu đề gồm ít nhất 2 ký tự.'); valid = false; }
-    if (draft.content.trim().length < 10) { setError('content','Hãy viết ít nhất 10 ký tự trước khi tiếp tục.'); valid = false; }
-    if (!valid) { toast('Vẫn còn thông tin cần hoàn thiện.', 'error'); return; }
+  if (step === 3) {
+    const title = document.querySelector('#canvas-letter-title');
+    const content = document.querySelector('#canvas-letter-content');
+    const invalidTitle = String(draft.title || '').trim().length < 2;
+    const invalidContent = String(draft.content || '').trim().length < 10;
+    title?.setAttribute('aria-invalid', String(invalidTitle));
+    content?.setAttribute('aria-invalid', String(invalidContent));
+    if (invalidTitle || invalidContent) {
+      toast(
+        invalidTitle ? 'Hãy đặt một tiêu đề gồm ít nhất 2 ký tự.' : 'Hãy viết ít nhất 10 ký tự trước khi tiếp tục.',
+        'error',
+      );
+      (invalidTitle ? title : content)?.focus();
+      return;
+    }
   }
   if (step === 4) {
     let valid = true;
@@ -805,7 +1037,10 @@ async function nextStep(step) {
     openModal({ title: 'Niêm phong lá thư?', message: 'Đây là khoảnh khắc cuối cùng bạn có thể quay lại chỉnh sửa nội dung.', confirm: 'Niêm phong ngay', onConfirm: submitLetter });
     return;
   }
-  location.hash = `/create/${step + 1}`;
+  flushPersistDraft();
+  const nextStepNumber =
+    step === 1 && draft.paperOrientation ? 3 : step + 1;
+  location.hash = `/create/${nextStepNumber}`;
 }
 
 async function submitLetter() {
@@ -817,6 +1052,7 @@ async function submitLetter() {
       address: draft.address || undefined, deliveryDate: new Date(`${draft.deliveryDate}T09:00:00`).toISOString(),
       deliveryMethod: draft.deliveryMethod, letterType: draft.letterType,
       paper: labelize(draft.paper), font: draft.font, envelope: labelize(draft.envelope), note: draft.note || undefined,
+      paperOrientation: draft.paperOrientation, selectedThemeId: draft.selectedThemeId,
     };
     const createdResponse = await fetch('/api/letters', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
     if (!createdResponse.ok) throw new Error('Không thể tạo lá thư');
@@ -824,7 +1060,18 @@ async function submitLetter() {
     const sealResponse = await fetch(`/api/letters/${created.id}/seal`, { method: 'POST' });
     if (!sealResponse.ok) throw new Error('Không thể niêm phong');
     currentLetter = await sealResponse.json();
-    localStorage.removeItem('postdrop-draft'); draft = { ...defaultDraft, deliveryDate: futureDate() };
+    const previousDraftId = draft.draftId;
+    clearTimeout(saveTimer);
+    localStorage.removeItem('postdrop-draft');
+    localStorage.removeItem(EDITOR_DRAFT_STORAGE_KEY);
+    draft = {
+      ...defaultDraft,
+      deliveryDate: futureDate(),
+      decorations: [],
+      userElements: [],
+      draftId: createDraftId(),
+    };
+    window.dispatchEvent(new CustomEvent('postdrop-draft-reset', { detail: { previousDraftId, draftId: draft.draftId } }));
     location.hash = '/success';
   } catch (error) {
     toast('Chưa thể niêm phong lúc này. Vui lòng thử lại.', 'error');
@@ -834,12 +1081,12 @@ async function submitLetter() {
 
 function renderSuccess() {
   const date = currentLetter?.deliveryDate?.slice(0,10) || draft.deliveryDate;
-  app.innerHTML = `<div class="app-page">${appHeader()}<main id="main-content" class="success-page"><div class="success-seal">P</div><span class="eyebrow">LÁ THƯ ĐÃ ĐƯỢC NIÊM PHONG</span><h1>Hẹn gặp lại những dòng chữ này trong tương lai.</h1><p>PostDrop sẽ gìn giữ lá thư an toàn và nhắc bạn xác nhận thông tin trước ngày giao.</p><div class="success-meta"><span>${date ? formatDate(date) : 'Ngày đã chọn'}</span><span>·</span><span>${deliveryLabel()}</span></div><div class="hero-actions">${button('Xem thư trong dashboard','/dashboard','primary', 'arrowRight')}${button('Viết thêm một lá thư','/create/1','secondary')}</div></main></div>`;
+  app.innerHTML = `<div class="app-page">${appHeader()}<main id="main-content" class="success-page"><div class="success-seal">P</div><span class="eyebrow">LÁ THƯ ĐÃ ĐƯỢC NIÊM PHONG</span><h1>Hẹn gặp lại những dòng chữ này trong tương lai.</h1><p>PostDrop sẽ gìn giữ lá thư an toàn và nhắc bạn xác nhận thông tin trước ngày giao.</p><div class="success-meta"><span>${date ? formatDate(date) : 'Ngày đã chọn'}</span><span>·</span><span>${deliveryLabel()}</span></div><div class="hero-actions">${button('Xem thư trong dashboard','/dashboard','primary', 'arrowRight')}${button('Viết thêm một lá thư','/create/1?new=1','secondary')}</div></main></div>`;
 }
 
 const statusMap = { draft: 'Bản nháp', awaiting_payment: 'Chờ thanh toán', received: 'PostDrop đã nhận thư', stored: 'Đang được lưu giữ', address_confirmation: 'Cần xác nhận địa chỉ', scheduled: 'Đã lên lịch gửi', in_transit: 'Đang vận chuyển', delivered: 'Đã giao thành công' };
 async function renderDashboard() {
-  app.innerHTML = `<div class="app-page">${appHeader()}<main id="main-content" class="container dashboard-main"><div class="dashboard-title"><div><span class="eyebrow">KHÔNG GIAN CỦA BẠN</span><h1>Chào buổi sáng, Minh Anh.</h1><p>Những lá thư của bạn đang được gìn giữ an toàn.</p></div>${button('Tạo lá thư mới','/create/1','primary','plus')}</div><div id="dashboard-content"><div class="skeleton"></div></div></main></div>`;
+  app.innerHTML = `<div class="app-page">${appHeader()}<main id="main-content" class="container dashboard-main"><div class="dashboard-title"><div><span class="eyebrow">KHÔNG GIAN CỦA BẠN</span><h1>Chào buổi sáng, Minh Anh.</h1><p>Những lá thư của bạn đang được gìn giữ an toàn.</p></div>${button('Tạo lá thư mới','/create/1?new=1','primary','plus')}</div><div id="dashboard-content"><div class="skeleton"></div></div></main></div>`;
   try {
     const response = await fetch('/api/letters/dashboard'); if (!response.ok) throw new Error();
     const data = await response.json();
@@ -850,7 +1097,7 @@ async function renderDashboard() {
 function statCards(summary) { return `<div class="stat-grid">${statCard('archive',summary.stored,'Thư đang lưu giữ')}${statCard('clock',summary.upcoming,'Sắp được gửi')}${statCard('map',summary.confirmation,'Cần xác nhận địa chỉ')}${statCard('check',summary.delivered,'Đã giao thành công')}</div>`; }
 function statCard(iconName, count, label) { return `<article class="stat-card">${icon(iconName)}<strong>${count}</strong><span>${label}</span></article>`; }
 function letterTable(letters) { return `<table class="letter-table"><thead><tr><th>Lá thư</th><th>Người nhận</th><th>Ngày giao</th><th>Hình thức</th><th>Trạng thái</th><th></th></tr></thead><tbody>${letters.map((letter) => `<tr><td><strong>${escapeHtml(letter.title)}</strong><small>#${escapeHtml(letter.id.slice(-8).toUpperCase())}</small></td><td>${escapeHtml(letter.recipientName)}</td><td>${formatDate(letter.deliveryDate.slice(0,10))}</td><td>${({email:'Email',physical:'Thư vật lý',hybrid:'Cả hai'})[letter.deliveryMethod]}</td><td><span class="badge ${letter.status}">${statusMap[letter.status]}</span></td><td><a class="text-button" href="#/letters/${letter.id}">Xem chi tiết</a></td></tr>`).join('')}</tbody></table>`; }
-function emptyState() { return `<div class="empty-state">${icon('mail')}<h3>Bạn chưa có lá thư nào đang chờ trong tương lai.</h3><p>Hãy bắt đầu bằng một điều nhỏ bạn muốn nhắc mình nhớ.</p>${button('Viết lá thư đầu tiên','/create/1')}</div>`; }
+function emptyState() { return `<div class="empty-state">${icon('mail')}<h3>Bạn chưa có lá thư nào đang chờ trong tương lai.</h3><p>Hãy bắt đầu bằng một điều nhỏ bạn muốn nhắc mình nhớ.</p>${button('Viết lá thư đầu tiên','/create/1?new=1')}</div>`; }
 
 async function renderLetterDetail(id) {
   app.innerHTML = `<div class="app-page">${appHeader()}<main id="main-content" class="container detail-main"><a class="back-link" href="#/dashboard">${icon('arrowLeft')}Trở về dashboard</a><div id="detail-content"><div class="skeleton"></div></div></main></div>`;
@@ -886,7 +1133,37 @@ function renderVerify() {
 function route() {
   window.scrollTo(0, 0);
   const hash = location.hash.slice(1) || '/';
-  if (hash.startsWith('/create/')) return renderBuilder(Number(hash.split('/')[2].split('?')[0]) || 1);
+  if (hash === '/create/resume') {
+    const requestedStep = Math.min(5, Math.max(1, Number(draft.lastStep || 1)));
+    const resumeStep =
+      requestedStep >= 3 && !draft.paperOrientation ? 2 : requestedStep;
+    history.replaceState(null, '', `${location.pathname}${location.search}#/create/${resumeStep}`);
+    return renderBuilder(resumeStep);
+  }
+  if (hash.startsWith('/create/')) {
+    const [path, query = ''] = hash.split('?');
+    const params = new URLSearchParams(query);
+    const requestedStep = Math.min(
+      5,
+      Math.max(1, Number(path.split('/')[2]) || 1),
+    );
+    if (params.get('new') === '1') {
+      const letterType =
+        params.get('type') === 'handwritten' ? 'handwritten' : 'online';
+      resetDraft(letterType);
+      history.replaceState(null, '', `${location.pathname}${location.search}#/create/1`);
+      return renderBuilder(1);
+    }
+    if (
+      requestedStep >= 3 &&
+      draft.paperOrientation !== 'portrait' &&
+      draft.paperOrientation !== 'landscape'
+    ) {
+      history.replaceState(null, '', `${location.pathname}${location.search}#/create/2`);
+      return renderBuilder(2);
+    }
+    return renderBuilder(requestedStep);
+  }
   if (hash === '/success') return renderSuccess();
   if (hash === '/dashboard') return renderDashboard();
   if (hash.startsWith('/letters/')) return renderLetterDetail(hash.split('/')[2]);

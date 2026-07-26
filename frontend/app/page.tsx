@@ -1,6 +1,15 @@
 'use client';
 
+import dynamic from 'next/dynamic';
 import { useEffect } from 'react';
+
+const LetterEditorBridge = dynamic(
+  () =>
+    import('./components/letter-editor/letter-editor-bridge').then(
+      (module) => module.LetterEditorBridge,
+    ),
+  { ssr: false },
+);
 
 export default function HomePage() {
   useEffect(() => {
@@ -21,11 +30,18 @@ export default function HomePage() {
     };
 
     const loadScripts = async () => {
+      void loadScript(
+        'https://cdn.jsdelivr.net/npm/animejs@3.2.2/lib/anime.min.js',
+      ).catch((err) => {
+        console.warn(
+          'Anime.js could not be loaded; using the reduced intro fallback.',
+          err,
+        );
+      });
       try {
-        await loadScript('https://cdn.jsdelivr.net/npm/animejs@3.2.2/lib/anime.min.js');
         await loadScript('/app.js');
       } catch (err) {
-        console.error('Error loading client scripts:', err);
+        console.error('Error loading the PostDrop client:', err);
       }
     };
 
@@ -121,6 +137,7 @@ export default function HomePage() {
       </div>
 
       <div id="app" />
+      <LetterEditorBridge />
       <div id="toast-region" className="toast-region" aria-live="polite" />
       <div id="modal-root" />
     </>
