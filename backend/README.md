@@ -1,8 +1,8 @@
 # PostDrop Backend MVP
 
-This backend implements Supabase authentication, letter management, and the first
-media-storage slice. BullMQ, Redis, Resend, payments, and physical fulfillment
-are deferred.
+This backend implements Supabase authentication, letter management, media
+storage, durable PostgreSQL scheduling, and a BullMQ/Redis outbox relay. Resend,
+payments, delivery queue consumers, and physical fulfillment are deferred.
 
 ## Included
 
@@ -14,6 +14,9 @@ are deferred.
 - A random per-letter data key wrapped by the backend master key.
 - An atomic `seal_letter_with_attachments` PostgreSQL function.
 - A durable `scheduled_actions` row created during sealing.
+- Atomic due-action claiming with `FOR UPDATE SKIP LOCKED`.
+- A transactional PostgreSQL outbox and idempotent BullMQ job IDs.
+- A separate scheduler process with outbox retry and reconciliation.
 - A public built-in asset library for PostDrop stickers and product artwork.
 - Private user image, sticker, and video uploads through signed Supabase URLs.
 - Draft-only attachment and decoration placement on letters.
@@ -26,6 +29,7 @@ are deferred.
 
 - Node.js 20.9 or newer.
 - Docker Desktop for the local Supabase stack.
+- Docker Desktop or another Redis 7 instance for BullMQ.
 - A Supabase project if using the hosted environment.
 
 ## Local setup
@@ -41,6 +45,12 @@ Start local Supabase:
 
 ```bash
 npm run db:start
+```
+
+Start Redis:
+
+```bash
+npm run redis:start
 ```
 
 The command prints the local API URL, publishable/anonymous key, and service-role
@@ -61,6 +71,12 @@ Start the API:
 
 ```bash
 npm run dev
+```
+
+In a second terminal, start the scheduler and BullMQ outbox relay:
+
+```bash
+npm run worker:dev
 ```
 
 The API is available at `http://localhost:3001/api` and Swagger UI at
@@ -219,6 +235,36 @@ revoked so it cannot bypass attachment preservation.
 worker-facing operation; it is intentionally not exposed through an HTTP
 controller. It verifies ciphertext and plaintext SHA-256 values around
 decryption.
+
+## Durable scheduling and BullMQ
+
+The scheduler process polls PostgreSQL for due actions. The
+`claim_due_scheduled_actions()` RPC locks rows with `FOR UPDATE SKIP LOCKED`,
+marks them queued, increments their dispatch generation, and creates an
+`outbox_events` row in the same transaction.
+
+The relay separately claims outbox events and publishes jobs to these BullMQ
+queues:
+
+| Queue | Current action |
+| --- | --- |
+| `delivery` | `deliver_email` |
+| `notifications` | `send_address_confirmation` |
+| `fulfillment` | `create_print_order` |
+| `documents` | Reserved for rendering jobs |
+
+Each job ID is `{scheduledActionId}-{dispatchCount}`. Re-publishing after a relay
+crash or Redis data loss is therefore idempotent for the current dispatch, while
+a later database retry receives a new generation.
+
+Reconciliation releases stale outbox locks, republishes old queued work with the
+same job ID, and repairs queued actions that somehow have no outbox record.
+PostgreSQL remains the source of truth; clearing Redis does not delete the
+canonical schedule.
+
+No BullMQ processor consumes these jobs yet. Running the scheduler safely leaves
+jobs waiting until the email, notification, document, and fulfillment processors
+are implemented.
 
 ## Verification
 

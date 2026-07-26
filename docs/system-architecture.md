@@ -26,9 +26,11 @@ flowchart LR
     User[Người dùng]
     FE[Next.js frontend]
     API[NestJS API]
+    Worker[NestJS scheduler]
     Auth[Supabase Auth]
     DB[(Supabase PostgreSQL)]
     Storage[(Supabase Storage)]
+    Redis[(Redis / BullMQ)]
     Local[(localStorage)]
 
     User --> FE
@@ -37,9 +39,12 @@ flowchart LR
     API --> Auth
     API --> DB
     API --> Storage
+    Worker --> DB
+    Worker --> Redis
 ~~~
 
-Không có worker, Redis, payment provider, email delivery provider hoặc physical-delivery integration trong runtime hiện tại.
+Có scheduler/outbox relay và Redis/BullMQ, nhưng chưa có queue processor, payment
+provider, email delivery provider hoặc physical-delivery integration.
 
 ## 3. Repository và ownership
 
@@ -57,6 +62,8 @@ Không có worker, Redis, payment provider, email delivery provider hoặc physi
 | Frontend | Next.js 16.2, React 19.2, TypeScript | Render app shell và tải client scripts |
 | Browser UI runtime | `public/app.js`, Anime.js 3 CDN | Hash routing, wizard, local draft, gọi letter endpoints |
 | API | NestJS 11, Express adapter | Validation, Auth API, letter CRUD/seal, Swagger, CORS |
+| Scheduler | NestJS application context | Claim due actions, relay outbox, reconcile |
+| Redis | Redis 7 + BullMQ | Ready jobs, retry/backoff state và concurrency |
 | Supabase Auth | Supabase | Register, login, refresh, logout, user verification |
 | PostgreSQL | Supabase PostgreSQL/PostgREST | Source of truth, RLS, constraints, atomic seal RPC |
 | Supabase Storage | Public built-ins + private draft media + backend-only sealed media | Signed uploads, draft composition và encrypted attachment snapshots |
@@ -77,6 +84,12 @@ AppModule
 ├─ AuthModule          # register/login/refresh/logout/me
 ├─ LettersModule       # CRUD, dashboard, seal
 └─ AssetsModule        # built-in catalog, signed uploads, letter attachments
+
+WorkerModule
+├─ ConfigModule
+├─ SupabaseModule
+├─ QueueInfrastructure # Redis/BullMQ queues
+└─ SchedulingModule    # PostgreSQL claim, outbox relay, reconciliation
 ~~~
 
 API dùng global prefix `/api`, `ValidationPipe` với whitelist, transform và từ chối unknown fields; CORS allowlist lấy từ environment; Swagger đặt tại `/api/docs`.
@@ -155,6 +168,7 @@ erDiagram
     AUTH_USERS ||--|| PROFILES : creates
     AUTH_USERS ||--o{ LETTERS : owns
     LETTERS ||--o{ SCHEDULED_ACTIONS : schedules
+    SCHEDULED_ACTIONS ||--o{ OUTBOX_EVENTS : publishes
     LETTERS ||--o{ DELIVERY_ATTEMPTS : records
     LETTERS ||--o{ LETTER_ATTACHMENTS : composes
     MEDIA_ASSETS ||--o{ LETTER_ATTACHMENTS : supplies
@@ -167,12 +181,14 @@ erDiagram
 | `profiles` | Hồ sơ gắn 1–1 với Supabase Auth user |
 | `letters` | Draft metadata, plaintext draft, encrypted sealed content và status |
 | `scheduled_actions` | Durable record về hành động cần chạy trong tương lai |
+| `outbox_events` | Durable handoff từ PostgreSQL sang BullMQ |
 | `delivery_attempts` | Lịch sử lần thử giao qua provider |
 | `media_assets` | Catalog cho built-in asset và upload riêng của user |
 | `letter_attachments` | Liên kết asset với letter, gồm vị trí/scale/rotation |
 | `sealed_letter_attachments` | Snapshot ciphertext, checksum và encryption metadata của attachment đã seal |
 
-Hai bảng scheduling đã có schema nhưng chưa có worker xử lý.
+Scheduler có thể claim action và publish BullMQ job; chưa có processor thực thi
+side effect và hoàn tất action.
 
 ## 8. Letter lifecycle và encryption
 
@@ -259,14 +275,15 @@ Repository chưa chứa Dockerfile, deployment manifest hay CI workflow. Trạng
 | Frontend auth integration | Chưa có; UI đang mô phỏng |
 | Frontend API proxy/base URL | Chưa cấu hình |
 | Bearer token trên frontend letter calls | Chưa có |
-| Worker thực thi scheduled action | Chưa có |
+| Scheduler claim/outbox relay | Đã có |
+| Worker thực thi scheduled action | Chưa có queue processor |
 | Email delivery | Chưa có |
 | Built-in asset Storage | Đã có schema/API và script đồng bộ |
 | User draft attachment Storage | Đã có signed upload, private RLS và letter links |
 | Encrypted sealed attachment Storage | Đã có bucket backend-only, envelope encryption và checksum |
 | Payment/payOS | Chưa có |
 | Physical fulfillment | Chưa có |
-| Redis/BullMQ/outbox dispatcher | Chưa có |
+| Redis/BullMQ/outbox dispatcher | Đã có foundation; chưa có consumers |
 | Production observability | Chưa có |
 
 `backend/docs/backend-architecture.md` mô tả nhiều boundary tương lai như worker, Redis, BullMQ, payment và delivery. Chúng là target design, không phải inventory runtime hiện tại.
@@ -306,7 +323,7 @@ Kết quả kiểm tra trên working tree ngày 2026-07-26:
 - Frontend Jest: 2 suites, 18 tests pass.
 - Frontend ESLint: pass.
 - Frontend Next.js production build: pass; 3 static pages generated.
-- Backend Jest: 4 suites, 12 tests pass.
+- Backend Jest: 6 suites, 21 tests pass.
 - Backend NestJS production build: pass.
 - Frontend `npm ci` báo 3 dependency vulnerabilities mức high; chưa chạy force-fix vì có thể tạo breaking change.
 - Supabase migration/RLS chưa được chạy end-to-end vì Docker/local stack không hoạt động trong lần kiểm tra này.
@@ -320,7 +337,8 @@ Kết quả kiểm tra trên working tree ngày 2026-07-26:
 | NestJS API trước Supabase | Giữ encryption key và business rules ở server | Thêm service phải vận hành |
 | User-scoped Supabase client | RLS vẫn thực thi | Phải quản lý access token đúng ở frontend |
 | Per-letter AES-256-GCM envelope encryption | Text và attachment snapshot dùng key riêng; master key chỉ wrap data key | Key rotation và delivery worker chưa có |
-| Durable `scheduled_actions` table | Không phụ thuộc timer trong process | Chưa có worker nên action chưa được thực thi |
+| Durable `scheduled_actions` table | Không phụ thuộc timer trong process | Chưa có queue processor nên action chưa được thực thi |
+| PostgreSQL outbox trước BullMQ | Không mất durable intent nếu Redis/process lỗi | Thêm relay và reconciliation phải vận hành |
 
 ## 14. Tài liệu liên quan
 

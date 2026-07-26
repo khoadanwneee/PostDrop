@@ -32,4 +32,16 @@ describe('validateEnvironment', () => {
       }),
     ).toThrow('base64-encoded 32-byte key');
   });
+
+  it('rejects invalid Redis and scheduler configuration', () => {
+    expect(() =>
+      validateEnvironment({ ...valid, REDIS_PORT: 'not-a-port' }),
+    ).toThrow('REDIS_PORT must be a positive integer');
+    expect(() =>
+      validateEnvironment({ ...valid, SCHEDULER_BATCH_SIZE: '0' }),
+    ).toThrow('SCHEDULER_BATCH_SIZE must be a positive integer');
+    expect(() =>
+      validateEnvironment({ ...valid, REDIS_TLS: 'sometimes' }),
+    ).toThrow('REDIS_TLS must be true or false');
+  });
 });

@@ -24,7 +24,15 @@ cd backend
 npm install
 npm run db:start
 npm run db:reset
+npm run redis:start
 npm run dev
+```
+
+Chạy scheduler và BullMQ outbox relay ở terminal backend thứ hai:
+
+```bash
+cd backend
+npm run worker:dev
 ```
 
 ```bash
