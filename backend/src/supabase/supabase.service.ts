@@ -6,10 +6,12 @@ import { createClient, SupabaseClient } from '@supabase/supabase-js';
 export class SupabaseService {
   private readonly url: string;
   private readonly publishableKey: string;
+  private readonly serviceRoleKey: string;
 
   constructor(config: ConfigService) {
     this.url = config.getOrThrow<string>('SUPABASE_URL');
     this.publishableKey = config.getOrThrow<string>('SUPABASE_PUBLISHABLE_KEY');
+    this.serviceRoleKey = config.getOrThrow<string>('SUPABASE_SERVICE_ROLE_KEY');
   }
 
   createPublicClient(): SupabaseClient {
@@ -33,6 +35,16 @@ export class SupabaseService {
         headers: {
           Authorization: `Bearer ${accessToken}`,
         },
+      },
+    });
+  }
+
+  createServiceClient(): SupabaseClient {
+    return createClient(this.url, this.serviceRoleKey, {
+      auth: {
+        autoRefreshToken: false,
+        detectSessionInUrl: false,
+        persistSession: false,
       },
     });
   }

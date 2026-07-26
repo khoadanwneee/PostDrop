@@ -6,7 +6,9 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { PostgrestError, SupabaseClient } from '@supabase/supabase-js';
+import { SealedAttachmentsService } from '../assets/sealed-attachments.service';
 import { EncryptionService } from '../encryption/encryption.service';
+import { SupabaseService } from '../supabase/supabase.service';
 import { CreateLetterDto } from './dto/create-letter.dto';
 import { UpdateLetterDto } from './dto/update-letter.dto';
 
@@ -60,7 +62,11 @@ interface LetterWithSecretRow extends LetterRow {
 
 @Injectable()
 export class LettersService {
-  constructor(private readonly encryptionService: EncryptionService) {}
+  constructor(
+    private readonly encryptionService: EncryptionService,
+    private readonly sealedAttachmentsService: SealedAttachmentsService,
+    private readonly supabaseService: SupabaseService,
+  ) {}
 
   async findAll(supabase: SupabaseClient) {
     const { data, error } = await supabase
@@ -134,36 +140,67 @@ export class LettersService {
     this.throwOnError(error);
   }
 
-  async seal(supabase: SupabaseClient, id: string) {
+  async seal(supabase: SupabaseClient, ownerId: string, id: string) {
     const current = await this.findSecretRow(supabase, id);
     if (current.status !== 'draft') {
       throw new ConflictException('The letter has already been sealed');
     }
 
     this.validateForSealing(current);
-    const encrypted = this.encryptionService.encrypt(current.content as string);
+    const dataKey = this.encryptionService.generateDataKey();
+    const encrypted = this.encryptionService.encryptTextWithDataKey(
+      current.content as string,
+      dataKey,
+    );
+    const wrappedKey = this.encryptionService.wrapDataKey(dataKey);
+    const prepared = await this.sealedAttachmentsService.prepareForSeal(
+      supabase,
+      id,
+      dataKey,
+    );
 
-    const { data, error } = await supabase
-      .rpc('seal_letter', {
+    const serviceSupabase = this.supabaseService.createServiceClient();
+    const { data, error } = await serviceSupabase
+      .rpc('seal_letter_with_attachments', {
+        p_owner_id: ownerId,
         p_letter_id: id,
         p_encrypted_content: encrypted.ciphertext,
         p_content_iv: encrypted.iv,
         p_content_auth_tag: encrypted.authTag,
         p_encryption_version: encrypted.version,
+        p_encrypted_data_key: wrappedKey.encryptedDataKey,
+        p_data_key_iv: wrappedKey.iv,
+        p_data_key_auth_tag: wrappedKey.authTag,
+        p_master_key_version: wrappedKey.keyVersion,
+        p_sealed_attachments: prepared.manifest,
       })
       .select(PUBLIC_LETTER_COLUMNS)
       .single();
 
-    if (error?.code === 'P0002') {
-      throw new NotFoundException('Letter not found');
+    if (error) {
+      // A PostgreSQL error means the transaction rolled back, so the staged
+      // objects are safe to remove. For an ambiguous transport failure, keep
+      // ciphertext and let reconciliation decide whether the RPC committed.
+      if (error.code) {
+        await this.sealedAttachmentsService.cleanupStaged(
+          prepared.uploadedPaths,
+        );
+      }
+      if (error?.code === 'P0002') {
+        throw new NotFoundException('Letter not found');
+      }
+      if (error?.code === 'P0001') {
+        throw new ConflictException(error.message);
+      }
+      if (
+        error?.code === '23514' ||
+        error?.code === '22007' ||
+        error?.code === '22P02'
+      ) {
+        throw new BadRequestException(error.message);
+      }
+      this.throwOnError(error);
     }
-    if (error?.code === 'P0001') {
-      throw new ConflictException(error.message);
-    }
-    if (error?.code === '23514' || error?.code === '22007') {
-      throw new BadRequestException(error.message);
-    }
-    this.throwOnError(error);
 
     return this.toResponse(data as unknown as LetterRow);
   }

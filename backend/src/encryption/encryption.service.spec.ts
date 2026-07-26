@@ -35,4 +35,38 @@ describe('EncryptionService', () => {
     expect(first.iv).not.toBe(second.iv);
     expect(first.ciphertext).not.toBe(second.ciphertext);
   });
+
+  it('wraps a per-letter key and decrypts text and attachment bytes', () => {
+    const dataKey = service.generateDataKey();
+    const wrapped = service.wrapDataKey(dataKey);
+    const restoredKey = service.unwrapDataKey(wrapped);
+    const text = service.encryptTextWithDataKey('sealed letter', restoredKey);
+    const attachment = service.encryptAttachment(
+      Buffer.from([0, 1, 2, 3, 255]),
+      restoredKey,
+    );
+
+    expect(restoredKey).toEqual(dataKey);
+    expect(service.decryptTextWithDataKey(text, restoredKey)).toBe(
+      'sealed letter',
+    );
+    expect(
+      service.decryptAttachment(
+        attachment.ciphertext,
+        attachment.iv,
+        attachment.authTag,
+        restoredKey,
+      ),
+    ).toEqual(Buffer.from([0, 1, 2, 3, 255]));
+    expect(text.version).toBe(2);
+    expect(attachment.version).toBe(2);
+  });
+
+  it('rejects a wrapped key with an unsupported master-key version', () => {
+    const wrapped = service.wrapDataKey(service.generateDataKey());
+
+    expect(() =>
+      service.unwrapDataKey({ ...wrapped, keyVersion: 999 }),
+    ).toThrow('Unsupported master key version');
+  });
 });

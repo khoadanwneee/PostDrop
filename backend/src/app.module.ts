@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { AppController } from './app.controller';
+import { AssetsModule } from './assets/assets.module';
 import { AuthModule } from './auth/auth.module';
 import { validateEnvironment } from './config/environment';
 import { EncryptionModule } from './encryption/encryption.module';
@@ -17,6 +18,7 @@ import { SupabaseModule } from './supabase/supabase.module';
     EncryptionModule,
     AuthModule,
     LettersModule,
+    AssetsModule,
   ],
   controllers: [AppController],
 })

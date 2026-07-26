@@ -82,6 +82,12 @@ Form có validation trực tiếp, tự lưu nháp vào `localStorage`, hỗ tr�
 | `PATCH` | `/api/letters/:id` | Cập nhật thư chưa niêm phong |
 | `DELETE` | `/api/letters/:id` | Xóa bản nháp |
 | `POST` | `/api/letters/:id/seal` | Mã hóa, niêm phong và lên lịch thư |
+| `GET` | `/api/assets/built-in` | Danh sách sticker/media có sẵn |
+| `GET` | `/api/assets/mine` | Media do người dùng tải lên |
+| `POST` | `/api/assets/uploads` | Tạo signed upload cho ảnh/video/sticker |
+| `POST` | `/api/assets/:id/complete` | Xác minh và hoàn tất upload |
+| `GET/POST` | `/api/letters/:id/attachments` | Đọc hoặc gắn media vào bản nháp |
+| `PATCH/DELETE` | `/api/letters/:id/attachments/:attachmentId` | Sửa vị trí hoặc gỡ media |
 
 Database schema, RLS policies, functions và seed data nằm trong thư mục
 `supabase/` để có thể dựng lại bằng Supabase CLI mà không cần tạo thủ công trên
