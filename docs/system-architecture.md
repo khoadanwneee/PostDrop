@@ -57,6 +57,7 @@ Không có worker, Redis, payment provider, email delivery provider, attachment 
 | API | NestJS 11, Express adapter | Validation, Auth API, letter CRUD/seal, Swagger, CORS |
 | Supabase Auth | Supabase | Register, login, refresh, logout, user verification |
 | PostgreSQL | Supabase PostgreSQL/PostgREST | Source of truth, RLS, constraints, atomic seal RPC |
+| Supabase Storage | Public built-ins + private user media | Sticker catalog, signed uploads and draft attachments |
 
 ### 4.1 Frontend runtime
 
@@ -72,7 +73,8 @@ AppModule
 ├─ SupabaseModule      # public/user-scoped Supabase client
 ├─ EncryptionModule    # AES-256-GCM khi seal
 ├─ AuthModule          # register/login/refresh/logout/me
-└─ LettersModule       # CRUD, dashboard, seal
+├─ LettersModule       # CRUD, dashboard, seal
+└─ AssetsModule        # built-in catalog, signed uploads, letter attachments
 ~~~
 
 API dùng global prefix `/api`, `ValidationPipe` với whitelist, transform và từ chối unknown fields; CORS allowlist lấy từ environment; Swagger đặt tại `/api/docs`.
@@ -94,6 +96,13 @@ API dùng global prefix `/api`, `ValidationPipe` với whitelist, transform và 
 | `PATCH` | `/api/letters/:id` | Bearer | Đã có |
 | `DELETE` | `/api/letters/:id` | Bearer | Đã có |
 | `POST` | `/api/letters/:id/seal` | Bearer | Đã có |
+| `GET` | `/api/assets/built-in` | Không | Đã có |
+| `GET` | `/api/assets/mine` | Bearer | Đã có |
+| `POST` | `/api/assets/uploads` | Bearer | Đã có |
+| `POST` | `/api/assets/:id/complete` | Bearer | Đã có |
+| `DELETE` | `/api/assets/:id` | Bearer | Đã có |
+| `GET/POST` | `/api/letters/:id/attachments` | Bearer | Đã có |
+| `PATCH/DELETE` | `/api/letters/:id/attachments/:attachmentId` | Bearer | Đã có |
 
 Frontend hiện gọi một số letter endpoints mà không gửi Bearer token, nên các request đó sẽ bị `AuthGuard` từ chối khi đi tới backend thật.
 
@@ -123,12 +132,14 @@ Refresh token cookie có `HttpOnly`, `Secure`, `SameSite=Lax` và path `/api/aut
 
 Backend không dùng service-role client cho user CRUD. `AuthGuard` xác minh Bearer token rồi tạo Supabase client mang JWT của user. Vì vậy PostgreSQL RLS vẫn là authorization boundary cuối cùng.
 
-RLS hiện bảo vệ bốn bảng:
+RLS hiện bảo vệ sáu bảng:
 
 - `profiles`: user chỉ xem/cập nhật profile của mình.
 - `letters`: owner đọc; chỉ draft được insert, update hoặc delete.
 - `scheduled_actions`: owner của parent letter được đọc.
 - `delivery_attempts`: owner của parent letter được đọc.
+- `media_assets`: built-in asset được đọc công khai; upload chỉ thuộc owner.
+- `letter_attachments`: owner đọc; chỉ attachment của draft được thay đổi.
 
 Grants giới hạn column mutation và `seal_letter` chỉ được execute bởi role authenticated.
 
@@ -149,6 +160,8 @@ erDiagram
 | `letters` | Draft metadata, plaintext draft, encrypted sealed content và status |
 | `scheduled_actions` | Durable record về hành động cần chạy trong tương lai |
 | `delivery_attempts` | Lịch sử lần thử giao qua provider |
+| `media_assets` | Catalog cho built-in asset và upload riêng của user |
+| `letter_attachments` | Liên kết asset với letter, gồm vị trí/scale/rotation |
 
 Hai bảng scheduling đã có schema nhưng chưa có worker xử lý.
 
@@ -232,7 +245,9 @@ Repository chưa chứa Dockerfile, deployment manifest hay CI workflow. Trạng
 | Bearer token trên frontend letter calls | Chưa có |
 | Worker thực thi scheduled action | Chưa có |
 | Email delivery | Chưa có |
-| Attachment Storage | Chưa có |
+| Built-in asset Storage | Đã có schema/API và script đồng bộ |
+| User draft attachment Storage | Đã có signed upload, private RLS và letter links |
+| Encrypted sealed attachment Storage | Chưa có |
 | Payment/payOS | Chưa có |
 | Physical fulfillment | Chưa có |
 | Redis/BullMQ/outbox dispatcher | Chưa có |

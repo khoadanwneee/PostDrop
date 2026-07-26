@@ -1,7 +1,8 @@
 # PostDrop Backend MVP
 
-This backend implements Supabase authentication and letter management. BullMQ,
-Redis, Resend, payments, attachments, and physical fulfillment are deferred.
+This backend implements Supabase authentication, letter management, and the first
+media-storage slice. BullMQ, Redis, Resend, payments, sealed-attachment
+encryption, and physical fulfillment are deferred.
 
 ## Included
 
@@ -12,6 +13,9 @@ Redis, Resend, payments, attachments, and physical fulfillment are deferred.
 - AES-256-GCM encryption when a letter is sealed.
 - An atomic `seal_letter` PostgreSQL function.
 - A durable `scheduled_actions` row created during sealing.
+- A public built-in asset library for PostDrop stickers and product artwork.
+- Private user image, sticker, and video uploads through signed Supabase URLs.
+- Draft-only attachment and decoration placement on letters.
 - Reproducible Supabase migrations and seed data under `../supabase/`.
 - Swagger UI at `/api/docs`.
 
@@ -137,6 +141,63 @@ unrelated domains, the cookie and CSRF design must be revisited.
 
 After sealing, plaintext content is removed from the database response and the
 letter can no longer be edited or deleted.
+
+## Media assets and attachments
+
+The migration creates two buckets:
+
+| Bucket | Access | Purpose |
+| --- | --- | --- |
+| `built-in-assets` | Public read | PostDrop-provided stickers and artwork |
+| `user-assets` | Private | Images, stickers, and videos uploaded by a user |
+
+User object paths start with the authenticated user ID. Storage RLS, media-table
+RLS, and letter-attachment RLS independently enforce ownership. User uploads are
+limited to 10 MiB for images/stickers and 50 MiB for videos. SVG is intentionally
+not accepted because active SVG content requires a separate sanitization policy.
+
+| Method | Endpoint | Purpose |
+| --- | --- | --- |
+| `GET` | `/api/assets/built-in` | List public built-in assets |
+| `GET` | `/api/assets/mine` | List the current user's uploads |
+| `POST` | `/api/assets/uploads` | Reserve an asset and create a signed upload |
+| `POST` | `/api/assets/:id/complete` | Verify and finalize an uploaded object |
+| `DELETE` | `/api/assets/:id` | Delete an unused user asset |
+| `GET` | `/api/letters/:letterId/attachments` | List a letter's attachments |
+| `POST` | `/api/letters/:letterId/attachments` | Attach an asset to a draft |
+| `PATCH` | `/api/letters/:letterId/attachments/:id` | Update draft placement |
+| `DELETE` | `/api/letters/:letterId/attachments/:id` | Detach from a draft |
+
+The direct upload flow is:
+
+1. Call `POST /api/assets/uploads` with `kind`, `fileName`, `mimeType`, and
+   `byteSize`.
+2. Upload the browser `File` to the returned bucket/path/token with Supabase
+   Storage's `uploadToSignedUrl`.
+3. Call `POST /api/assets/:id/complete`. The API verifies that the object exists
+   and matches the declared type and size.
+4. Link the ready asset to a draft letter.
+
+Decoration attachments also accept `x`, `y`, `scale`, `rotation`, `zIndex`, and
+`clientId`, matching the existing frontend sticker placement model. Attachments
+can be read after sealing but cannot be added, repositioned, or removed.
+
+### Sync the existing built-in stickers
+
+After applying the migration, provide the service-role key only to the
+administrative script:
+
+```bash
+cd backend
+npm run assets:sync-built-in
+```
+
+The command uploads everything under `frontend/public/stickers/` and upserts its
+catalog metadata. It is safe to run again when built-in files change.
+
+This first slice stores draft/user media but does not yet encrypt and copy it to
+an append-only sealed bucket. That sealing step belongs with the future
+per-letter key and delivery-worker implementation.
 
 ## Verification
 
