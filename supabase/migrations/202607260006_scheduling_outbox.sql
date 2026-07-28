@@ -93,7 +93,8 @@ begin
     returning * into v_action;
 
     v_queue_name := case v_action.action_type
-      when 'deliver_email' then 'delivery'
+      when 'release_letter' then 'delivery'
+      when 'send_notification' then 'notifications'
       when 'send_address_confirmation' then 'notifications'
       when 'create_print_order' then 'fulfillment'
       else 'delivery'

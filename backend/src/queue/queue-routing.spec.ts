@@ -7,7 +7,8 @@ import { queueForAction } from './queue-routing';
 
 describe('queueForAction', () => {
   it.each([
-    ['deliver_email', DELIVERY_QUEUE],
+    ['release_letter', DELIVERY_QUEUE],
+    ['send_notification', NOTIFICATIONS_QUEUE],
     ['send_address_confirmation', NOTIFICATIONS_QUEUE],
     ['create_print_order', FULFILLMENT_QUEUE],
   ] as const)('routes %s to %s', (actionType, queueName) => {

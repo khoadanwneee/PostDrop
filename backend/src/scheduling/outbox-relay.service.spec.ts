@@ -17,14 +17,14 @@ describe('OutboxRelayService', () => {
     scheduled_action_id: '22222222-2222-4222-8222-222222222222',
     dispatch_count: 1,
     queue_name: DELIVERY_QUEUE,
-    job_name: 'deliver_email',
+    job_name: 'release_letter',
     job_id: '22222222-2222-4222-8222-222222222222-1',
     payload: {
       scheduledActionId: '22222222-2222-4222-8222-222222222222',
       letterId: '33333333-3333-4333-8333-333333333333',
-      actionType: 'deliver_email',
+      actionType: 'release_letter',
       idempotencyKey:
-        'deliver_email:33333333-3333-4333-8333-333333333333',
+        'release_letter:33333333-3333-4333-8333-333333333333',
       dispatchCount: 1,
     },
     publish_attempt_count: 1,
@@ -67,7 +67,7 @@ describe('OutboxRelayService', () => {
     await expect(relay.publishClaimed('worker-1', 50, 300)).resolves.toBe(1);
 
     expect(delivery.add).toHaveBeenCalledWith(
-      'deliver_email',
+      'release_letter',
       event.payload,
       { jobId: event.job_id },
     );

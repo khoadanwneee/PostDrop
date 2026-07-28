@@ -31,6 +31,7 @@ const PUBLIC_LETTER_COLUMNS = [
   'note',
   'content_status',
   'sealed_at',
+  'available_at',
   'created_at',
   'updated_at',
 ].join(',');
@@ -54,6 +55,7 @@ interface LetterRow {
   note: string | null;
   content_status: 'draft' | 'sealed';
   sealed_at: string | null;
+  available_at: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -358,6 +360,7 @@ export class LettersService {
       note: row.note ?? undefined,
       contentStatus: row.content_status,
       sealedAt: row.sealed_at ?? undefined,
+      availableAt: row.available_at ?? undefined,
       createdAt: row.created_at,
       updatedAt: row.updated_at,
     };

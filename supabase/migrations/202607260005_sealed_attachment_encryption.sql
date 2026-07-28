@@ -288,7 +288,7 @@ begin
   where id = p_letter_id;
 
   if v_letter.delivery_method = 'digital' then
-    v_action_type := 'deliver_email';
+    v_action_type := 'release_letter';
 
     insert into public.scheduled_actions (
       letter_id,

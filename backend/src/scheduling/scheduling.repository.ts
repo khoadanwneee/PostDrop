@@ -70,6 +70,31 @@ export class SchedulingRepository {
     return (data ?? {}) as Record<string, number>;
   }
 
+  async completeLetterRelease(
+    scheduledActionId: string,
+    letterId: string,
+  ): Promise<boolean> {
+    const supabase = this.supabaseService.createServiceClient();
+    const { data, error } = await supabase.rpc('complete_letter_release', {
+      p_scheduled_action_id: scheduledActionId,
+      p_letter_id: letterId,
+    });
+    this.throwOnError(error);
+    return data === true;
+  }
+
+  async markActionFailed(
+    scheduledActionId: string,
+    errorCode: string,
+  ): Promise<void> {
+    const supabase = this.supabaseService.createServiceClient();
+    const { error } = await supabase.rpc('mark_scheduled_action_failed', {
+      p_scheduled_action_id: scheduledActionId,
+      p_error_code: errorCode,
+    });
+    this.throwOnError(error);
+  }
+
   private throwOnError(error: { code?: string; message?: string } | null): void {
     if (!error) {
       return;

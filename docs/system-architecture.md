@@ -43,8 +43,9 @@ flowchart LR
     Worker --> Redis
 ~~~
 
-Có scheduler/outbox relay và Redis/BullMQ, nhưng chưa có queue processor, payment
-provider, email delivery provider hoặc physical-delivery integration.
+Có scheduler/outbox relay, Redis/BullMQ và processor idempotent để release thư
+digital. Chưa có email delivery provider/processor, payment provider hoặc
+physical-delivery integration.
 
 ## 3. Repository và ownership
 
@@ -189,8 +190,9 @@ erDiagram
 | `letter_attachments` | Liên kết asset với letter, gồm vị trí/scale/rotation |
 | `sealed_letter_attachments` | Snapshot ciphertext, checksum và encryption metadata của attachment đã seal |
 
-Scheduler có thể claim action và publish BullMQ job; chưa có processor thực thi
-side effect và hoàn tất action.
+Scheduler có thể claim action và publish BullMQ job. Processor `release_letter`
+đánh dấu thư digital khả dụng tại thời điểm đã hẹn, hoàn tất action và tạo
+`send_notification` email-only độc lập. Chưa có processor gửi email.
 
 ## 8. Letter lifecycle và encryption
 
@@ -297,14 +299,14 @@ Repository chưa chứa Dockerfile, deployment manifest hay CI workflow. Trạng
 | Frontend API proxy/base URL | Chưa cấu hình |
 | Bearer token trên frontend letter calls | Chưa có |
 | Scheduler claim/outbox relay | Đã có |
-| Worker thực thi scheduled action | Chưa có queue processor |
+| Worker thực thi scheduled action | Đã có `release_letter`; các processor email/document/fulfillment chưa có |
 | Email delivery | Chưa có |
 | Built-in asset Storage | Đã có schema/API và script đồng bộ |
 | User draft attachment Storage | Đã có signed upload, private RLS và letter links |
 | Encrypted sealed attachment Storage | Đã có bucket backend-only, envelope encryption và checksum |
 | Payment/payOS | Chưa có |
 | Physical fulfillment | Chưa có |
-| Redis/BullMQ/outbox dispatcher | Đã có foundation; chưa có consumers |
+| Redis/BullMQ/outbox dispatcher | Đã có dispatcher và consumer `release_letter` |
 | Production observability | Chưa có |
 
 `backend/docs/backend-architecture.md` mô tả nhiều boundary tương lai như worker, Redis, BullMQ, payment và delivery. Chúng là target design, không phải inventory runtime hiện tại.
@@ -344,12 +346,12 @@ Kết quả kiểm tra trên working tree ngày 2026-07-26:
 - Frontend Jest: 2 suites, 18 tests pass.
 - Frontend ESLint: pass.
 - Frontend Next.js production build: pass; 3 static pages generated.
-- Backend Jest: 8 suites, 31 tests pass.
+- Backend Jest: 9 suites, 36 tests pass.
 - Backend NestJS production build: pass.
 - Frontend `npm ci` báo 3 dependency vulnerabilities mức high; chưa chạy force-fix vì có thể tạo breaking change.
-- Local Supabase reset đã apply migrations `001`–`006`; database lint không báo
-  schema error và smoke test xác nhận digital seal tạo action còn physical seal
-  chỉ tạo order chưa schedule.
+- Local Supabase reset đã apply migrations `001`–`007`; database lint không báo
+  schema error. Smoke test xác nhận release digital đặt `available_at`, hoàn tất
+  action và tạo đúng một action email-only `send_notification`.
 
 ## 13. Quyết định và trade-off hiện tại
 
@@ -360,7 +362,7 @@ Kết quả kiểm tra trên working tree ngày 2026-07-26:
 | NestJS API trước Supabase | Giữ encryption key và business rules ở server | Thêm service phải vận hành |
 | User-scoped Supabase client | RLS vẫn thực thi | Phải quản lý access token đúng ở frontend |
 | Per-letter AES-256-GCM envelope encryption | Text và attachment snapshot dùng key riêng; master key chỉ wrap data key | Key rotation và delivery worker chưa có |
-| Durable `scheduled_actions` table | Không phụ thuộc timer trong process | Chưa có queue processor nên action chưa được thực thi |
+| Durable `scheduled_actions` table | Không phụ thuộc timer trong process | Mới thực thi release digital; email và physical action vẫn chưa có processor |
 | PostgreSQL outbox trước BullMQ | Không mất durable intent nếu Redis/process lỗi | Thêm relay và reconciliation phải vận hành |
 
 ## 14. Tài liệu liên quan

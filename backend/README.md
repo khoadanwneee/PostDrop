@@ -248,7 +248,8 @@ queues:
 
 | Queue | Current action |
 | --- | --- |
-| `delivery` | `deliver_email` |
+| `delivery` | `release_letter` |
+| `notifications` | `send_notification` (email only) |
 | `notifications` | `send_address_confirmation` |
 | `fulfillment` | `create_print_order` |
 | `documents` | Reserved for rendering jobs |
@@ -262,9 +263,11 @@ same job ID, and repairs queued actions that somehow have no outbox record.
 PostgreSQL remains the source of truth; clearing Redis does not delete the
 canonical schedule.
 
-No BullMQ processor consumes these jobs yet. Running the scheduler safely leaves
-jobs waiting until the email, notification, document, and fulfillment processors
-are implemented.
+The delivery queue has an idempotent `release_letter` processor. It marks a due
+digital letter available and atomically creates a `send_notification` action on
+the notifications queue. That action is email-only; no in-app notification
+system is planned. The email provider/processor, document processor, and
+fulfillment processors are still deferred.
 
 ## Verification
 

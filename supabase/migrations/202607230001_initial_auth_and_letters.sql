@@ -66,6 +66,7 @@ create table public.letters (
   note text,
   content_status text not null default 'draft'
     check (content_status in ('draft', 'sealed')),
+  available_at timestamptz,
   encrypted_content text,
   content_iv text,
   content_auth_tag text,
@@ -223,7 +224,8 @@ create table public.scheduled_actions (
   letter_id uuid not null references public.letters(id) on delete cascade,
   action_type text not null
     check (action_type in (
-      'deliver_email',
+      'release_letter',
+      'send_notification',
       'send_address_confirmation',
       'create_print_order'
     )),
@@ -335,7 +337,7 @@ begin
   where id = p_letter_id;
 
   if v_letter.delivery_method = 'digital' then
-    v_action_type := 'deliver_email';
+    v_action_type := 'release_letter';
 
     insert into public.scheduled_actions (
       letter_id,
