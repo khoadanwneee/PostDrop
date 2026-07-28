@@ -113,22 +113,40 @@ begin
     raise exception 'Letter not found' using errcode = 'P0002';
   end if;
 
-  if v_letter.status <> 'draft' then
+  if v_letter.content_status <> 'draft' then
     raise exception 'Only draft letters can be sealed' using errcode = 'P0001';
+  end if;
+
+  if v_letter.delivery_method = 'physical'
+    and v_letter.physical_fulfillment_mode = 'stored_original'
+  then
+    raise exception 'Stored-original orders use the custody sealing workflow'
+      using errcode = 'P0001';
   end if;
 
   if char_length(trim(v_letter.title)) < 2
     or v_letter.content is null
     or char_length(trim(v_letter.content)) < 10
     or char_length(trim(v_letter.recipient_name)) < 2
-    or char_length(trim(v_letter.recipient_email)) < 3
+    or (
+      v_letter.delivery_method = 'digital'
+      and char_length(trim(v_letter.recipient_email)) < 3
+    )
+    or (
+      v_letter.delivery_method = 'physical'
+      and (
+        v_letter.physical_fulfillment_mode is null
+        or char_length(trim(coalesce(v_letter.address, ''))) < 3
+      )
+    )
     or v_letter.delivery_at is null
   then
     raise exception 'Letter is incomplete' using errcode = '23514';
   end if;
 
   if v_letter.delivery_at <= timezone('utc', now()) then
-    raise exception 'Delivery time must be in the future' using errcode = '22007';
+    raise exception 'Expected arrival time must be in the future'
+      using errcode = '22007';
   end if;
 
   if p_encryption_version < 2
@@ -265,26 +283,129 @@ begin
     data_key_iv = p_data_key_iv,
     data_key_auth_tag = p_data_key_auth_tag,
     master_key_version = p_master_key_version,
-    status = 'scheduled',
+    content_status = 'sealed',
     sealed_at = timezone('utc', now())
   where id = p_letter_id;
 
-  v_action_type := case
-    when v_letter.delivery_method = 'physical' then 'create_print_order'
-    else 'deliver_email'
-  end;
+  if v_letter.delivery_method = 'digital' then
+    v_action_type := 'deliver_email';
 
-  insert into public.scheduled_actions (
+    insert into public.scheduled_actions (
+      letter_id,
+      action_type,
+      execute_at,
+      idempotency_key
+    )
+    values (
+      p_letter_id,
+      v_action_type,
+      v_letter.delivery_at,
+      v_action_type || ':' || p_letter_id::text
+    );
+  else
+    insert into public.physical_orders (
+      letter_id,
+      fulfillment_mode,
+      status,
+      expected_arrival_at,
+      address_snapshot
+    )
+    values (
+      p_letter_id,
+      'print_design',
+      'planning',
+      v_letter.delivery_at,
+      v_letter.address
+    );
+  end if;
+
+  return query
+  select *
+  from public.letters
+  where id = p_letter_id;
+end;
+$$;
+
+create or replace function public.seal_stored_original_letter(
+  p_owner_id uuid,
+  p_letter_id uuid
+)
+returns setof public.letters
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_letter public.letters;
+begin
+  select *
+  into v_letter
+  from public.letters
+  where id = p_letter_id
+    and owner_id = p_owner_id
+  for update;
+
+  if not found then
+    raise exception 'Letter not found' using errcode = 'P0002';
+  end if;
+
+  if v_letter.content_status <> 'draft' then
+    raise exception 'Only draft letters can be sealed' using errcode = 'P0001';
+  end if;
+
+  if v_letter.delivery_method <> 'physical'
+    or v_letter.physical_fulfillment_mode <> 'stored_original'
+  then
+    raise exception 'Letter is not a stored-original physical order'
+      using errcode = '23514';
+  end if;
+
+  if char_length(trim(v_letter.title)) < 2
+    or char_length(trim(v_letter.recipient_name)) < 2
+    or char_length(trim(coalesce(v_letter.address, ''))) < 3
+    or v_letter.delivery_at is null
+  then
+    raise exception 'Stored-original order is incomplete'
+      using errcode = '23514';
+  end if;
+
+  if v_letter.delivery_at <= timezone('utc', now()) then
+    raise exception 'Expected arrival time must be in the future'
+      using errcode = '22007';
+  end if;
+
+  if nullif(trim(coalesce(v_letter.content, '')), '') is not null
+    or exists (
+      select 1
+      from public.letter_attachments
+      where letter_id = p_letter_id
+    )
+  then
+    raise exception
+      'Stored-original contents must not be uploaded or represented as digital letter content'
+      using errcode = '23514';
+  end if;
+
+  update public.letters
+  set
+    content = null,
+    content_status = 'sealed',
+    sealed_at = timezone('utc', now())
+  where id = p_letter_id;
+
+  insert into public.physical_orders (
     letter_id,
-    action_type,
-    execute_at,
-    idempotency_key
+    fulfillment_mode,
+    status,
+    expected_arrival_at,
+    address_snapshot
   )
   values (
     p_letter_id,
-    v_action_type,
+    'stored_original',
+    'awaiting_intake',
     v_letter.delivery_at,
-    v_action_type || ':' || p_letter_id::text
+    v_letter.address
   );
 
   return query
@@ -329,4 +450,11 @@ grant execute
     smallint,
     jsonb
   )
+  to service_role;
+
+revoke all
+  on function public.seal_stored_original_letter(uuid, uuid)
+  from public;
+grant execute
+  on function public.seal_stored_original_letter(uuid, uuid)
   to service_role;

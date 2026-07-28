@@ -1,8 +1,8 @@
 # PostDrop — Kiến trúc hệ thống hiện tại
 
-**Cập nhật:** 2026-07-26
+**Cập nhật:** 2026-07-28
 
-**Baseline:** working tree sau commit `2ad9336`
+**Baseline:** scheduling tại `cf0e544` cùng delivery-model working tree hiện tại
 
 **Phạm vi:** Mô tả code đã có; không coi thiết kế tương lai là thành phần đã triển khai
 
@@ -167,6 +167,7 @@ attachment sealing.
 erDiagram
     AUTH_USERS ||--|| PROFILES : creates
     AUTH_USERS ||--o{ LETTERS : owns
+    LETTERS ||--o| PHYSICAL_ORDERS : fulfills
     LETTERS ||--o{ SCHEDULED_ACTIONS : schedules
     SCHEDULED_ACTIONS ||--o{ OUTBOX_EVENTS : publishes
     LETTERS ||--o{ DELIVERY_ATTEMPTS : records
@@ -179,7 +180,8 @@ erDiagram
 | Table | Vai trò hiện tại |
 |---|---|
 | `profiles` | Hồ sơ gắn 1–1 với Supabase Auth user |
-| `letters` | Draft metadata, plaintext draft, encrypted sealed content và status |
+| `letters` | Draft metadata, plaintext/encrypted content và trạng thái immutable `draft/sealed` |
+| `physical_orders` | Mode vật lý, expected arrival, deadline nội bộ và fulfillment status |
 | `scheduled_actions` | Durable record về hành động cần chạy trong tương lai |
 | `outbox_events` | Durable handoff từ PostgreSQL sang BullMQ |
 | `delivery_attempts` | Lịch sử lần thử giao qua provider |
@@ -192,14 +194,25 @@ side effect và hoàn tất action.
 
 ## 8. Letter lifecycle và encryption
 
-Trạng thái database cho phép:
+Letter content và fulfillment không còn dùng chung một status:
 
 ~~~text
-draft → scheduled → processing → delivered
-                          └────→ failed
+Letter content:
+draft → sealed
+
+Digital:
+sealed → scheduled_action tại expected arrival
+
+Physical print_design:
+sealed → physical_order(planning) → production/dispatch sau khi có deadline
+
+Physical stored_original:
+sealed → physical_order(awaiting_intake) → received → in_custody → dispatch
 ~~~
 
-Code hiện chỉ hoàn chỉnh transition `draft → scheduled` khi seal.
+Expected arrival là lời hứa với khách hàng. Physical order chưa tạo production
+hoặc dispatch action cho đến khi backend có carrier/service level và tính được
+deadline nội bộ đáng tin cậy.
 
 ~~~mermaid
 sequenceDiagram
@@ -213,14 +226,21 @@ sequenceDiagram
     FE->>API: POST letters/:id/seal
     API->>DB: đọc owner draft
     API->>API: validate invariant
-    API->>ENC: tạo per-letter key và encrypt text/attachments
-    API->>STORAGE: upload attachment ciphertext
-    API->>RPC: encrypted payload + exact attachment manifest
-    RPC->>DB: lock owner row
-    RPC->>DB: validate và lưu sealed attachment metadata
-    RPC->>DB: clear plaintext, save ciphertext + wrapped key
-    RPC->>DB: status = scheduled, sealed_at = now
-    RPC->>DB: create scheduled_action idempotent
+    alt digital hoặc physical print_design
+        API->>ENC: tạo per-letter key và encrypt text/attachments
+        API->>STORAGE: upload attachment ciphertext
+        API->>RPC: encrypted payload + exact attachment manifest
+        RPC->>DB: clear plaintext, save ciphertext + wrapped key
+    else physical stored_original
+        API->>RPC: seal_stored_original_letter
+        RPC->>DB: verify không có digital content/attachment
+    end
+    RPC->>DB: content_status = sealed, sealed_at = now
+    alt digital
+        RPC->>DB: create scheduled_action tại expected arrival
+    else physical
+        RPC->>DB: create unscheduled physical_order
+    end
 ~~~
 
 `LETTER_ENCRYPTION_KEY` là base64 master key 32 byte và chỉ nằm ở backend
@@ -271,7 +291,8 @@ Repository chưa chứa Dockerfile, deployment manifest hay CI workflow. Trạng
 | NestJS letter CRUD/dashboard/seal | Đã có ở backend |
 | Supabase schema, RLS, grants | Đã có |
 | AES-256-GCM seal | Đã có |
-| Atomic scheduled action khi seal | Đã có |
+| Atomic digital scheduled action khi seal | Đã có |
+| Physical order tách khỏi letter content state | Đã có; chưa tính production/dispatch deadline |
 | Frontend auth integration | Chưa có; UI đang mô phỏng |
 | Frontend API proxy/base URL | Chưa cấu hình |
 | Bearer token trên frontend letter calls | Chưa có |
@@ -323,10 +344,12 @@ Kết quả kiểm tra trên working tree ngày 2026-07-26:
 - Frontend Jest: 2 suites, 18 tests pass.
 - Frontend ESLint: pass.
 - Frontend Next.js production build: pass; 3 static pages generated.
-- Backend Jest: 6 suites, 21 tests pass.
+- Backend Jest: 8 suites, 31 tests pass.
 - Backend NestJS production build: pass.
 - Frontend `npm ci` báo 3 dependency vulnerabilities mức high; chưa chạy force-fix vì có thể tạo breaking change.
-- Supabase migration/RLS chưa được chạy end-to-end vì Docker/local stack không hoạt động trong lần kiểm tra này.
+- Local Supabase reset đã apply migrations `001`–`006`; database lint không báo
+  schema error và smoke test xác nhận digital seal tạo action còn physical seal
+  chỉ tạo order chưa schedule.
 
 ## 13. Quyết định và trade-off hiện tại
 

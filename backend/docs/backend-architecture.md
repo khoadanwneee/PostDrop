@@ -128,12 +128,13 @@ The initial production schema should include:
 | --- | --- |
 | `users` | PostDrop profile linked to a Supabase Auth user |
 | `guest_sessions` | Signed guest identity before registration |
-| `letters` | Non-secret metadata and letter lifecycle |
+| `letters` | Non-secret metadata and immutable content state |
 | `letter_contents` | Encrypted-content location, checksum, and key metadata |
 | `attachments` | Encrypted attachment metadata and object paths |
 | `recipients` | Recipient contact and delivery information |
 | `orders` | Server-calculated product and amount |
 | `payments` | Provider references and payment state |
+| `physical_orders` | Physical mode, expected arrival, internal deadlines, and fulfillment state |
 | `scheduled_actions` | Durable future actions |
 | `delivery_attempts` | Every attempted email or physical delivery |
 | `physical_shipments` | Carrier, tracking code, and fulfillment status |
@@ -145,43 +146,60 @@ Do not use one status field to represent the entire product. Maintain separate
 state machines:
 
 ```text
-Letter:
-DRAFT -> AWAITING_PAYMENT -> SEALED -> SCHEDULED -> DELIVERED
+Letter content:
+DRAFT -> SEALED
 
 Payment:
 PENDING -> PAID -> REFUNDED
         \-> FAILED
 
-Email delivery:
+Digital release:
+PLANNED -> AVAILABLE -> OPENED
+        \-> FAILED
+
+Email notification:
 PENDING -> PROCESSING -> SENT -> DELIVERED
                     \-> RETRYING -> FAILED
                                \-> BOUNCED
 
-Physical delivery:
-PENDING_ADDRESS_CONFIRMATION -> READY_TO_PRINT -> PRINTED
--> HANDED_TO_CARRIER -> IN_TRANSIT -> DELIVERED
-                                  \-> FAILED
+Printed-design fulfillment:
+PLANNING -> READY_TO_PRINT -> PRINTED -> QUALITY_CONTROL
+-> READY_TO_DISPATCH -> DISPATCHED -> DELIVERED
+                                     \-> FAILED
+
+Stored-original fulfillment:
+AWAITING_INTAKE -> RECEIVED -> IN_CUSTODY -> READY_TO_DISPATCH
+-> DISPATCHED -> DELIVERED
+              \-> FAILED
 ```
 
-For hybrid delivery, email and physical delivery have independent delivery
-records. The letter becomes fully delivered only after both required deliveries
-reach a terminal success state.
+Delivery method is exclusive: `digital` or `physical`. Physical delivery then
+selects `print_design` or `stored_original`. Sealing makes content or order
+details immutable; it does not by itself mean that fulfillment is scheduled or
+complete. Physical fulfillment state belongs to `physical_orders`, not to the
+letter content record.
 
 ## 5. Date and timezone rules
 
 Store all of the following:
 
-- The calendar date selected by the user.
+- The expected-arrival calendar date selected by the user.
 - The user's IANA timezone, for example `Asia/Ho_Chi_Minh`.
-- The intended local delivery time.
-- The calculated UTC timestamp used by the scheduler.
+- The intended local expected-arrival time.
+- The immutable expected-arrival UTC timestamp.
+- For physical orders, separately calculated production and dispatch deadlines.
 
-Do not reconstruct a delivery timestamp later from the server's timezone.
+Do not reconstruct an expected-arrival timestamp later from the server's
+timezone.
 
 When the user seals a letter, calculate and persist the immutable delivery
-instant. If the user is allowed to change the delivery date later, represent
-that as a separately audited operation rather than silently editing the sealed
-record.
+promise. Digital release may be scheduled at that instant. Physical production
+and dispatch must be calculated backwards from expected arrival using the
+selected carrier service, holidays, production lead time, and safety buffers.
+Until those authoritative deadlines exist, keep the physical order in planning
+or awaiting-intake state and create no prematurely timed fulfillment action. If
+the user is allowed to change the expected arrival later, represent that as a
+separately audited operation rather than silently editing the sealed record.
 
 ## 6. Reliable future scheduling
 
@@ -530,8 +548,10 @@ twice:
 - Duplicate and out-of-order webhooks.
 - Payment amount or order-reference mismatch.
 - Daylight-saving and timezone conversion.
-- Address reminder and delivery occurring on the same day.
-- Hybrid delivery where only one channel succeeds.
+- Address reminder and dispatch deadline occurring on the same day.
+- Physical orders remaining unscheduled until authoritative production and
+  dispatch deadlines exist.
+- Stored-original custody intake, inventory, and return exceptions.
 - Missing or checksum-invalid Storage object.
 - Expired guest session during checkout.
 - Encryption-key rotation with older ciphertext.

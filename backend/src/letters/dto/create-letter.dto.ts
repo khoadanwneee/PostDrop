@@ -5,6 +5,7 @@ import {
   IsOptional,
   IsString,
   MaxLength,
+  ValidateIf,
 } from 'class-validator';
 
 export class CreateLetterDto {
@@ -24,7 +25,7 @@ export class CreateLetterDto {
 
   @IsOptional()
   @IsEmail()
-  recipientEmail: string;
+  recipientEmail?: string;
 
   @IsOptional()
   @IsString()
@@ -36,15 +37,23 @@ export class CreateLetterDto {
 
   @IsOptional()
   @IsDateString()
-  deliveryDate: string;
+  expectedArrivalAt: string;
 
   @IsOptional()
   @IsString()
   deliveryTimezone?: string;
 
   @IsOptional()
-  @IsIn(['email', 'physical', 'hybrid'])
-  deliveryMethod: 'email' | 'physical' | 'hybrid';
+  @IsIn(['digital', 'physical'])
+  deliveryMethod: 'digital' | 'physical';
+
+  @ValidateIf(
+    (dto: CreateLetterDto) =>
+      dto.deliveryMethod === 'physical' ||
+      dto.physicalFulfillmentMode !== undefined,
+  )
+  @IsIn(['print_design', 'stored_original'])
+  physicalFulfillmentMode?: 'print_design' | 'stored_original';
 
   @IsOptional()
   @IsIn(['online', 'handwritten'])

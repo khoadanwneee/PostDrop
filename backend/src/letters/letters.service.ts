@@ -23,12 +23,13 @@ const PUBLIC_LETTER_COLUMNS = [
   'delivery_at',
   'delivery_timezone',
   'delivery_method',
+  'physical_fulfillment_mode',
   'letter_type',
   'paper',
   'font',
   'envelope',
   'note',
-  'status',
+  'content_status',
   'sealed_at',
   'created_at',
   'updated_at',
@@ -44,13 +45,14 @@ interface LetterRow {
   address: string | null;
   delivery_at: string | null;
   delivery_timezone: string;
-  delivery_method: 'email' | 'physical' | 'hybrid';
+  delivery_method: 'digital' | 'physical';
+  physical_fulfillment_mode: 'print_design' | 'stored_original' | null;
   letter_type: 'online' | 'handwritten';
   paper: string;
   font: string;
   envelope: string;
   note: string | null;
-  status: 'draft' | 'scheduled' | 'processing' | 'delivered' | 'failed';
+  content_status: 'draft' | 'sealed';
   sealed_at: string | null;
   created_at: string;
   updated_at: string;
@@ -82,12 +84,15 @@ export class LettersService {
     const letters = await this.findAll(supabase);
     return {
       summary: {
-        stored: letters.filter((letter) => letter.status === 'scheduled').length,
-        upcoming: letters.filter((letter) =>
-          ['scheduled', 'processing'].includes(letter.status),
+        stored: letters.filter((letter) => letter.contentStatus === 'sealed').length,
+        upcoming: letters.filter(
+          (letter) =>
+            letter.contentStatus === 'sealed' &&
+            letter.expectedArrivalAt !== null &&
+            new Date(letter.expectedArrivalAt).getTime() > Date.now(),
         ).length,
         confirmation: 0,
-        delivered: letters.filter((letter) => letter.status === 'delivered').length,
+        delivered: 0,
       },
       letters,
     };
@@ -111,7 +116,7 @@ export class LettersService {
 
   async update(supabase: SupabaseClient, id: string, dto: UpdateLetterDto) {
     const current = await this.findRow(supabase, id);
-    if (current.status !== 'draft') {
+    if (current.content_status !== 'draft') {
       throw new ConflictException('A sealed letter cannot be edited');
     }
 
@@ -132,7 +137,7 @@ export class LettersService {
 
   async remove(supabase: SupabaseClient, id: string): Promise<void> {
     const current = await this.findRow(supabase, id);
-    if (current.status !== 'draft') {
+    if (current.content_status !== 'draft') {
       throw new ConflictException('A sealed letter cannot be deleted');
     }
 
@@ -142,11 +147,18 @@ export class LettersService {
 
   async seal(supabase: SupabaseClient, ownerId: string, id: string) {
     const current = await this.findSecretRow(supabase, id);
-    if (current.status !== 'draft') {
+    if (current.content_status !== 'draft') {
       throw new ConflictException('The letter has already been sealed');
     }
 
     this.validateForSealing(current);
+    if (
+      current.delivery_method === 'physical' &&
+      current.physical_fulfillment_mode === 'stored_original'
+    ) {
+      return this.sealStoredOriginal(ownerId, id);
+    }
+
     const dataKey = this.encryptionService.generateDataKey();
     const encrypted = this.encryptionService.encryptTextWithDataKey(
       current.content as string,
@@ -205,6 +217,34 @@ export class LettersService {
     return this.toResponse(data as unknown as LetterRow);
   }
 
+  private async sealStoredOriginal(ownerId: string, id: string) {
+    const serviceSupabase = this.supabaseService.createServiceClient();
+    const { data, error } = await serviceSupabase
+      .rpc('seal_stored_original_letter', {
+        p_owner_id: ownerId,
+        p_letter_id: id,
+      })
+      .select(PUBLIC_LETTER_COLUMNS)
+      .single();
+
+    if (error?.code === 'P0002') {
+      throw new NotFoundException('Letter not found');
+    }
+    if (error?.code === 'P0001') {
+      throw new ConflictException(error.message);
+    }
+    if (
+      error?.code === '23514' ||
+      error?.code === '22007' ||
+      error?.code === '22P02'
+    ) {
+      throw new BadRequestException(error.message);
+    }
+    this.throwOnError(error);
+
+    return this.toResponse(data as unknown as LetterRow);
+  }
+
   private async findRow(supabase: SupabaseClient, id: string): Promise<LetterRow> {
     const { data, error } = await supabase
       .from('letters')
@@ -242,14 +282,38 @@ export class LettersService {
     if (letter.title.trim().length < 2) {
       throw new BadRequestException('The title must contain at least 2 characters');
     }
-    if (!letter.content || letter.content.trim().length < 10) {
+    const isStoredOriginal =
+      letter.delivery_method === 'physical' &&
+      letter.physical_fulfillment_mode === 'stored_original';
+    if (
+      !isStoredOriginal &&
+      (!letter.content || letter.content.trim().length < 10)
+    ) {
       throw new BadRequestException('The content must contain at least 10 characters');
     }
-    if (letter.recipient_name.trim().length < 2 || !letter.recipient_email) {
+    if (isStoredOriginal && letter.content?.trim()) {
+      throw new BadRequestException(
+        'Stored-original contents must not be entered as digital letter content',
+      );
+    }
+    if (letter.recipient_name.trim().length < 2) {
       throw new BadRequestException('Recipient information is incomplete');
     }
+    if (letter.delivery_method === 'digital' && !letter.recipient_email) {
+      throw new BadRequestException(
+        'A recipient email is required for digital delivery',
+      );
+    }
+    if (
+      letter.delivery_method === 'physical' &&
+      (!letter.physical_fulfillment_mode || !letter.address?.trim())
+    ) {
+      throw new BadRequestException(
+        'A fulfillment mode and address are required for physical delivery',
+      );
+    }
     if (!letter.delivery_at || new Date(letter.delivery_at).getTime() <= Date.now()) {
-      throw new BadRequestException('Delivery time must be in the future');
+      throw new BadRequestException('Expected arrival time must be in the future');
     }
   }
 
@@ -261,9 +325,11 @@ export class LettersService {
       recipient_email: dto.recipientEmail,
       recipient_phone: dto.recipientPhone,
       address: dto.address,
-      delivery_at: dto.deliveryDate,
+      delivery_at: dto.expectedArrivalAt,
       delivery_timezone: dto.deliveryTimezone,
       delivery_method: dto.deliveryMethod,
+      physical_fulfillment_mode:
+        dto.deliveryMethod === 'digital' ? null : dto.physicalFulfillmentMode,
       letter_type: dto.letterType,
       paper: dto.paper,
       font: dto.font,
@@ -276,20 +342,21 @@ export class LettersService {
     return {
       id: row.id,
       title: row.title,
-      ...(row.status === 'draft' ? { content: row.content ?? '' } : {}),
+      ...(row.content_status === 'draft' ? { content: row.content ?? '' } : {}),
       recipientName: row.recipient_name,
       recipientEmail: row.recipient_email,
       recipientPhone: row.recipient_phone ?? undefined,
       address: row.address ?? undefined,
-      deliveryDate: row.delivery_at,
+      expectedArrivalAt: row.delivery_at,
       deliveryTimezone: row.delivery_timezone,
       deliveryMethod: row.delivery_method,
+      physicalFulfillmentMode: row.physical_fulfillment_mode ?? undefined,
       letterType: row.letter_type,
       paper: row.paper,
       font: row.font,
       envelope: row.envelope,
       note: row.note ?? undefined,
-      status: row.status,
+      contentStatus: row.content_status,
       sealedAt: row.sealed_at ?? undefined,
       createdAt: row.created_at,
       updatedAt: row.updated_at,

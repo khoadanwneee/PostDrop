@@ -262,7 +262,7 @@ create policy letter_attachments_insert_own_draft
       from public.letters
       where letters.id = letter_attachments.letter_id
         and letters.owner_id = auth.uid()
-        and letters.status = 'draft'
+        and letters.content_status = 'draft'
     )
     and exists (
       select 1
@@ -285,7 +285,7 @@ create policy letter_attachments_update_own_draft
       from public.letters
       where letters.id = letter_attachments.letter_id
         and letters.owner_id = auth.uid()
-        and letters.status = 'draft'
+        and letters.content_status = 'draft'
     )
   )
   with check (
@@ -294,7 +294,7 @@ create policy letter_attachments_update_own_draft
       from public.letters
       where letters.id = letter_attachments.letter_id
         and letters.owner_id = auth.uid()
-        and letters.status = 'draft'
+        and letters.content_status = 'draft'
     )
   );
 
@@ -307,7 +307,7 @@ create policy letter_attachments_delete_own_draft
       from public.letters
       where letters.id = letter_attachments.letter_id
         and letters.owner_id = auth.uid()
-        and letters.status = 'draft'
+        and letters.content_status = 'draft'
     )
   );
 

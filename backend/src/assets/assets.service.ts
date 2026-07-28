@@ -460,19 +460,19 @@ export class AssetsService {
   private async assertOwnLetter(supabase: SupabaseClient, letterId: string) {
     const { data, error } = await supabase
       .from('letters')
-      .select('id,status')
+      .select('id,content_status')
       .eq('id', letterId)
       .maybeSingle();
     this.throwOnError(error);
     if (!data) {
       throw new NotFoundException('Letter not found');
     }
-    return data as { id: string; status: string };
+    return data as { id: string; content_status: string };
   }
 
   private async assertDraft(supabase: SupabaseClient, letterId: string) {
     const letter = await this.assertOwnLetter(supabase, letterId);
-    if (letter.status !== 'draft') {
+    if (letter.content_status !== 'draft') {
       throw new ConflictException('Attachments on a sealed letter cannot change');
     }
   }

@@ -55,16 +55,17 @@ create table public.letters (
   address text,
   delivery_at timestamptz,
   delivery_timezone text not null default 'Asia/Ho_Chi_Minh',
-  delivery_method text not null default 'email'
-    check (delivery_method in ('email', 'physical', 'hybrid')),
+  delivery_method text not null default 'digital'
+    check (delivery_method in ('digital', 'physical')),
+  physical_fulfillment_mode text,
   letter_type text not null default 'online'
     check (letter_type in ('online', 'handwritten')),
   paper text not null default 'Ivory',
   font text not null default 'Editorial',
   envelope text not null default 'Burgundy',
   note text,
-  status text not null default 'draft'
-    check (status in ('draft', 'scheduled', 'processing', 'delivered', 'failed')),
+  content_status text not null default 'draft'
+    check (content_status in ('draft', 'sealed')),
   encrypted_content text,
   content_iv text,
   content_auth_tag text,
@@ -74,27 +75,147 @@ create table public.letters (
   updated_at timestamptz not null default timezone('utc', now()),
   constraint letters_title_length check (char_length(title) <= 200),
   constraint letters_content_length check (content is null or char_length(content) <= 50000),
+  constraint letters_physical_fulfillment_mode check (
+    (
+      delivery_method = 'digital'
+      and physical_fulfillment_mode is null
+    )
+    or (
+      delivery_method = 'physical'
+      and physical_fulfillment_mode is not null
+      and physical_fulfillment_mode in ('print_design', 'stored_original')
+    )
+  ),
   constraint letters_sealed_content check (
-    status = 'draft'
+    content_status = 'draft'
     or (
       content is null
-      and encrypted_content is not null
-      and content_iv is not null
-      and content_auth_tag is not null
-      and encryption_version is not null
       and sealed_at is not null
+      and (
+        (
+          delivery_method = 'physical'
+          and physical_fulfillment_mode = 'stored_original'
+          and encrypted_content is null
+          and content_iv is null
+          and content_auth_tag is null
+          and encryption_version is null
+        )
+        or (
+          encrypted_content is not null
+          and content_iv is not null
+          and content_auth_tag is not null
+          and encryption_version is not null
+        )
+      )
     )
   )
 );
+
+comment on column public.letters.delivery_at is
+  'Immutable customer-promised expected arrival instant in UTC once the letter is sealed.';
+
+comment on column public.letters.delivery_timezone is
+  'IANA timezone used to interpret and display the expected arrival selection.';
+
+comment on column public.letters.delivery_method is
+  'Exclusive delivery method: digital or physical.';
+
+comment on column public.letters.physical_fulfillment_mode is
+  'Required only for physical delivery: print_design or stored_original.';
 
 create index letters_owner_updated_idx
   on public.letters(owner_id, updated_at desc);
 create index letters_delivery_idx
   on public.letters(delivery_at)
-  where status = 'scheduled';
+  where content_status = 'sealed';
 
 create trigger letters_set_updated_at
   before update on public.letters
+  for each row execute function public.set_updated_at();
+
+create table public.physical_orders (
+  id uuid primary key default gen_random_uuid(),
+  letter_id uuid not null unique
+    references public.letters(id) on delete restrict,
+  fulfillment_mode text not null
+    check (fulfillment_mode in ('print_design', 'stored_original')),
+  status text not null
+    check (status in (
+      'planning',
+      'awaiting_intake',
+      'received',
+      'in_custody',
+      'ready_for_production',
+      'in_production',
+      'quality_control',
+      'ready_to_dispatch',
+      'dispatched',
+      'delivered',
+      'failed',
+      'cancelled'
+    )),
+  expected_arrival_at timestamptz not null,
+  production_due_at timestamptz,
+  dispatch_due_at timestamptz,
+  address_snapshot text not null,
+  carrier text,
+  service_level text,
+  tracking_code text,
+  created_at timestamptz not null default timezone('utc', now()),
+  updated_at timestamptz not null default timezone('utc', now()),
+  constraint physical_orders_mode_status check (
+    (
+      fulfillment_mode = 'print_design'
+      and status in (
+        'planning',
+        'ready_for_production',
+        'in_production',
+        'quality_control',
+        'ready_to_dispatch',
+        'dispatched',
+        'delivered',
+        'failed',
+        'cancelled'
+      )
+    )
+    or (
+      fulfillment_mode = 'stored_original'
+      and status in (
+        'awaiting_intake',
+        'received',
+        'in_custody',
+        'ready_to_dispatch',
+        'dispatched',
+        'delivered',
+        'failed',
+        'cancelled'
+      )
+    )
+  ),
+  constraint physical_orders_production_mode check (
+    fulfillment_mode = 'print_design'
+    or production_due_at is null
+  ),
+  constraint physical_orders_production_before_arrival check (
+    production_due_at is null
+    or production_due_at < expected_arrival_at
+  ),
+  constraint physical_orders_dispatch_before_arrival check (
+    dispatch_due_at is null
+    or dispatch_due_at < expected_arrival_at
+  ),
+  constraint physical_orders_deadline_order check (
+    production_due_at is null
+    or dispatch_due_at is null
+    or production_due_at <= dispatch_due_at
+  )
+);
+
+create index physical_orders_status_arrival_idx
+  on public.physical_orders(status, expected_arrival_at);
+
+create trigger physical_orders_set_updated_at
+  before update on public.physical_orders
   for each row execute function public.set_updated_at();
 
 create table public.scheduled_actions (
@@ -173,7 +294,7 @@ begin
     raise exception 'Letter not found' using errcode = 'P0002';
   end if;
 
-  if v_letter.status <> 'draft' then
+  if v_letter.content_status <> 'draft' then
     raise exception 'Only draft letters can be sealed' using errcode = 'P0001';
   end if;
 
@@ -181,14 +302,25 @@ begin
     or v_letter.content is null
     or char_length(trim(v_letter.content)) < 10
     or char_length(trim(v_letter.recipient_name)) < 2
-    or char_length(trim(v_letter.recipient_email)) < 3
+    or (
+      v_letter.delivery_method = 'digital'
+      and char_length(trim(v_letter.recipient_email)) < 3
+    )
+    or (
+      v_letter.delivery_method = 'physical'
+      and (
+        v_letter.physical_fulfillment_mode is null
+        or char_length(trim(coalesce(v_letter.address, ''))) < 3
+      )
+    )
     or v_letter.delivery_at is null
   then
     raise exception 'Letter is incomplete' using errcode = '23514';
   end if;
 
   if v_letter.delivery_at <= timezone('utc', now()) then
-    raise exception 'Delivery time must be in the future' using errcode = '22007';
+    raise exception 'Expected arrival time must be in the future'
+      using errcode = '22007';
   end if;
 
   update public.letters
@@ -198,27 +330,45 @@ begin
     content_iv = p_content_iv,
     content_auth_tag = p_content_auth_tag,
     encryption_version = p_encryption_version,
-    status = 'scheduled',
+    content_status = 'sealed',
     sealed_at = timezone('utc', now())
   where id = p_letter_id;
 
-  v_action_type := case
-    when v_letter.delivery_method = 'physical' then 'create_print_order'
-    else 'deliver_email'
-  end;
+  if v_letter.delivery_method = 'digital' then
+    v_action_type := 'deliver_email';
 
-  insert into public.scheduled_actions (
-    letter_id,
-    action_type,
-    execute_at,
-    idempotency_key
-  )
-  values (
-    p_letter_id,
-    v_action_type,
-    v_letter.delivery_at,
-    v_action_type || ':' || p_letter_id::text
-  );
+    insert into public.scheduled_actions (
+      letter_id,
+      action_type,
+      execute_at,
+      idempotency_key
+    )
+    values (
+      p_letter_id,
+      v_action_type,
+      v_letter.delivery_at,
+      v_action_type || ':' || p_letter_id::text
+    );
+  else
+    insert into public.physical_orders (
+      letter_id,
+      fulfillment_mode,
+      status,
+      expected_arrival_at,
+      address_snapshot
+    )
+    values (
+      p_letter_id,
+      v_letter.physical_fulfillment_mode,
+      case
+        when v_letter.physical_fulfillment_mode = 'stored_original'
+          then 'awaiting_intake'
+        else 'planning'
+      end,
+      v_letter.delivery_at,
+      v_letter.address
+    );
+  end if;
 
   return query
   select *
@@ -229,6 +379,7 @@ $$;
 
 alter table public.profiles enable row level security;
 alter table public.letters enable row level security;
+alter table public.physical_orders enable row level security;
 alter table public.scheduled_actions enable row level security;
 alter table public.delivery_attempts enable row level security;
 
@@ -251,18 +402,30 @@ create policy letters_select_own
 create policy letters_insert_own
   on public.letters for insert
   to authenticated
-  with check (owner_id = auth.uid() and status = 'draft');
+  with check (owner_id = auth.uid() and content_status = 'draft');
 
 create policy letters_update_own_draft
   on public.letters for update
   to authenticated
-  using (owner_id = auth.uid() and status = 'draft')
-  with check (owner_id = auth.uid() and status = 'draft');
+  using (owner_id = auth.uid() and content_status = 'draft')
+  with check (owner_id = auth.uid() and content_status = 'draft');
 
 create policy letters_delete_own_draft
   on public.letters for delete
   to authenticated
-  using (owner_id = auth.uid() and status = 'draft');
+  using (owner_id = auth.uid() and content_status = 'draft');
+
+create policy physical_orders_select_own
+  on public.physical_orders for select
+  to authenticated
+  using (
+    exists (
+      select 1
+      from public.letters
+      where letters.id = physical_orders.letter_id
+        and letters.owner_id = auth.uid()
+    )
+  );
 
 create policy scheduled_actions_select_own
   on public.scheduled_actions for select
@@ -304,6 +467,7 @@ grant insert (
   delivery_at,
   delivery_timezone,
   delivery_method,
+  physical_fulfillment_mode,
   letter_type,
   paper,
   font,
@@ -320,6 +484,7 @@ grant update (
   delivery_at,
   delivery_timezone,
   delivery_method,
+  physical_fulfillment_mode,
   letter_type,
   paper,
   font,
@@ -330,6 +495,9 @@ grant delete on table public.letters to authenticated;
 
 revoke all on table public.scheduled_actions from anon, authenticated;
 grant select on table public.scheduled_actions to authenticated;
+
+revoke all on table public.physical_orders from anon, authenticated;
+grant select on table public.physical_orders to authenticated;
 
 revoke all on table public.delivery_attempts from anon, authenticated;
 grant select on table public.delivery_attempts to authenticated;

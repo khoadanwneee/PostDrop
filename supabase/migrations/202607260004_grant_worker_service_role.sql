@@ -11,9 +11,16 @@ grant select
   on table public.profiles
   to service_role;
 
--- Read encrypted payloads and move a letter through processing/delivery states.
+-- Read encrypted payloads. Content immutability is separate from fulfillment
+-- lifecycle state.
 grant select, update
   on table public.letters
+  to service_role;
+
+-- Fulfillment workers plan, dispatch, and reconcile physical orders without
+-- changing the sealed letter content state.
+grant select, insert, update
+  on table public.physical_orders
   to service_role;
 
 -- Read both built-in and user media. Insert/update support is also required by
