@@ -44,4 +44,35 @@ describe('validateEnvironment', () => {
       validateEnvironment({ ...valid, REDIS_TLS: 'sometimes' }),
     ).toThrow('REDIS_TLS must be true or false');
   });
+
+  it('accepts complete Gmail OAuth configuration', () => {
+    expect(
+      validateEnvironment({
+        ...valid,
+        GMAIL_CLIENT_ID: 'client-id',
+        GMAIL_CLIENT_SECRET: 'client-secret',
+        GMAIL_REFRESH_TOKEN: 'refresh-token',
+        GMAIL_SENDER_EMAIL: 'sender@example.edu',
+        GMAIL_SENDER_NAME: 'PostDrop',
+        GMAIL_OAUTH_PORT: '53682',
+      }),
+    ).toEqual({
+      ...valid,
+      GMAIL_CLIENT_ID: 'client-id',
+      GMAIL_CLIENT_SECRET: 'client-secret',
+      GMAIL_REFRESH_TOKEN: 'refresh-token',
+      GMAIL_SENDER_EMAIL: 'sender@example.edu',
+      GMAIL_SENDER_NAME: 'PostDrop',
+      GMAIL_OAUTH_PORT: '53682',
+    });
+  });
+
+  it('rejects partial Gmail configuration', () => {
+    expect(() =>
+      validateEnvironment({
+        ...valid,
+        GMAIL_CLIENT_ID: 'client-id',
+      }),
+    ).toThrow('GMAIL_CLIENT_ID, GMAIL_CLIENT_SECRET');
+  });
 });

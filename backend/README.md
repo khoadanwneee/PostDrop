@@ -1,8 +1,10 @@
 # PostDrop Backend MVP
 
 This backend implements Supabase authentication, letter management, media
-storage, durable PostgreSQL scheduling, and a BullMQ/Redis outbox relay. Resend,
-payments, delivery queue consumers, and physical fulfillment are deferred.
+storage, durable PostgreSQL scheduling, a BullMQ/Redis outbox relay, and
+Gmail OAuth notifications for released digital letters through the focused
+Google authentication client and Gmail REST endpoint. Payments, document
+processing, and physical fulfillment are deferred.
 
 ## Included
 
@@ -31,6 +33,7 @@ payments, delivery queue consumers, and physical fulfillment are deferred.
 - Docker Desktop for the local Supabase stack.
 - Docker Desktop or another Redis 7 instance for BullMQ.
 - A Supabase project if using the hosted environment.
+- A Google Cloud OAuth client with Gmail API access.
 
 ## Local setup
 
@@ -54,8 +57,8 @@ npm run redis:start
 ```
 
 The command prints the local API URL, publishable/anonymous key, and service-role
-key. Copy `.env.example` to `.env`, fill in both Supabase keys, and generate an
-encryption key:
+key. Copy `.env.example` to `.env`, fill in both Supabase keys, configure the
+selected email provider for the worker, and generate an encryption key:
 
 ```bash
 openssl rand -base64 32
@@ -265,9 +268,25 @@ canonical schedule.
 
 The delivery queue has an idempotent `release_letter` processor. It marks a due
 digital letter available and atomically creates a `send_notification` action on
-the notifications queue. That action is email-only; no in-app notification
-system is planned. The email provider/processor, document processor, and
-fulfillment processors are still deferred.
+the notifications queue. The notification processor records one durable
+delivery attempt, sends through Gmail OAuth, and atomically persists the Gmail
+message ID. Replayed jobs skip sends already recorded as
+successful. Gmail uses OAuth refresh credentials—never a Google password or app
+password. The email is notification-only and does not contain plaintext letter
+content or an insecure reveal link. Document and fulfillment processors are
+still deferred.
+
+For Gmail OAuth setup and a direct live-send check:
+
+```bash
+npm run gmail:authorize
+GMAIL_TEST_RECIPIENT=your-test-recipient@example.com npm run email:test:gmail
+```
+
+An external OAuth app left in Google's **Testing** publishing state issues
+refresh tokens that expire after seven days. This is suitable for a short demo;
+longer-running use requires an approved production OAuth configuration or
+periodic reauthorization.
 
 ## Verification
 

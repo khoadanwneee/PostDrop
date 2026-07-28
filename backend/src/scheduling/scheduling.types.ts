@@ -19,3 +19,12 @@ export interface ClaimedOutboxEvent {
   payload: ScheduledActionJob;
   publish_attempt_count: number;
 }
+
+export interface PreparedEmailNotification {
+  should_send: boolean;
+  attempt_id: string;
+  recipient_email: string;
+  recipient_name: string;
+  letter_title: string;
+  idempotency_key: string;
+}

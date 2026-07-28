@@ -1,6 +1,9 @@
 import { Injectable, InternalServerErrorException } from '@nestjs/common';
 import { SupabaseService } from '../supabase/supabase.service';
-import { ClaimedOutboxEvent } from './scheduling.types';
+import {
+  ClaimedOutboxEvent,
+  PreparedEmailNotification,
+} from './scheduling.types';
 
 @Injectable()
 export class SchedulingRepository {
@@ -81,6 +84,54 @@ export class SchedulingRepository {
     });
     this.throwOnError(error);
     return data === true;
+  }
+
+  async prepareEmailNotification(
+    scheduledActionId: string,
+    letterId: string,
+  ): Promise<PreparedEmailNotification> {
+    const supabase = this.supabaseService.createServiceClient();
+    const { data, error } = await supabase.rpc('prepare_email_notification', {
+      p_scheduled_action_id: scheduledActionId,
+      p_letter_id: letterId,
+    });
+    this.throwOnError(error);
+    const notification = data?.[0] as PreparedEmailNotification | undefined;
+    if (!notification) {
+      throw new InternalServerErrorException({
+        message: 'Email notification preparation returned no data',
+        code: 'EMPTY_NOTIFICATION',
+      });
+    }
+    return notification;
+  }
+
+  async completeEmailNotification(
+    scheduledActionId: string,
+    attemptId: string,
+    providerMessageId: string,
+  ): Promise<void> {
+    const supabase = this.supabaseService.createServiceClient();
+    const { error } = await supabase.rpc('complete_email_notification', {
+      p_scheduled_action_id: scheduledActionId,
+      p_attempt_id: attemptId,
+      p_provider_message_id: providerMessageId,
+    });
+    this.throwOnError(error);
+  }
+
+  async failEmailNotification(
+    scheduledActionId: string,
+    attemptId: string,
+    errorCode: string,
+  ): Promise<void> {
+    const supabase = this.supabaseService.createServiceClient();
+    const { error } = await supabase.rpc('fail_email_notification', {
+      p_scheduled_action_id: scheduledActionId,
+      p_attempt_id: attemptId,
+      p_error_code: errorCode,
+    });
+    this.throwOnError(error);
   }
 
   async markActionFailed(

@@ -4,14 +4,17 @@ import { OutboxRelayService } from './outbox-relay.service';
 import { SchedulingRepository } from './scheduling.repository';
 import { SchedulingRuntimeService } from './scheduling-runtime.service';
 import { LetterReleaseProcessor } from './letter-release.processor';
+import { EmailModule } from '../email/email.module';
+import { EmailNotificationProcessor } from './email-notification.processor';
 
 @Module({
-  imports: [QueueInfrastructureModule],
+  imports: [QueueInfrastructureModule, EmailModule],
   providers: [
     SchedulingRepository,
     OutboxRelayService,
     SchedulingRuntimeService,
     LetterReleaseProcessor,
+    EmailNotificationProcessor,
   ],
 })
 export class SchedulingModule {}

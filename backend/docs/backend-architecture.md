@@ -31,7 +31,7 @@ The initial stack is:
 | Long-term scheduling | PostgreSQL `scheduled_actions` table |
 | Background queue | BullMQ |
 | Queue storage | Redis |
-| Email | Resend |
+| Email | Gmail OAuth |
 | Vietnam payments | payOS behind a provider interface |
 | Physical delivery | Carrier adapter for GHN, GHTK, or Viettel Post |
 | Error monitoring | Sentry |
@@ -62,7 +62,7 @@ flowchart LR
     QUEUE --> WORKER["NestJS worker"]
     WORKER --> DB
     WORKER --> STORAGE
-    WORKER --> EMAIL["Resend"]
+    WORKER --> EMAIL["Gmail OAuth"]
     WORKER --> CARRIER["Physical delivery provider"]
 
     PAYMENT --> WEBHOOKS["Verified webhooks"]
@@ -402,26 +402,23 @@ Official payOS documentation describes payment links and webhook confirmation:
 
 ## 11. Email delivery
 
-Use Resend initially behind an `EmailProvider` interface.
+Keep email delivery behind an `EmailProvider` interface. The student prototype
+uses Gmail OAuth to send as an authorized FIT Google Workspace account without
+storing a password or app password.
 
 For every send:
 
 - Use a stable PostDrop idempotency key.
 - Persist the provider message ID.
 - Do not include plaintext letter content in application logs.
-- Verify webhook signatures.
-- Store and deduplicate webhook event IDs.
-- Handle webhooks as at-least-once and potentially out of order.
-- Track `sent`, `delivered`, `delayed`, `bounced`, and `complained` separately.
+- Track Gmail API acceptance separately from actual recipient delivery.
 
-Resend supports provider-side idempotency keys, but the documented
-deduplication window is limited. PostDrop's `delivery_attempts` unique constraint
-must provide permanent duplicate-send protection.
-
-References:
-
-- [Resend idempotency keys](https://resend.com/docs/dashboard/emails/idempotency-keys)
-- [Resend webhook behavior](https://resend.com/docs/webhooks/introduction)
+Gmail does not provide an API-send idempotency key or transactional delivery
+webhooks. PostDrop's `delivery_attempts` unique constraint and recorded
+successful state suppress normal job replays. The ambiguous crash window after
+Gmail accepts a message but before the database records its ID remains an
+explicit reconciliation concern. Delivery, bounce, and complaint tracking will
+require a future provider or a separately authorized inbox-processing design.
 
 ## 12. Physical delivery
 
@@ -467,7 +464,11 @@ REDIS_PORT=
 REDIS_USERNAME=
 REDIS_PASSWORD=
 REDIS_TLS=
-RESEND_API_KEY=
+GMAIL_CLIENT_ID=
+GMAIL_CLIENT_SECRET=
+GMAIL_REFRESH_TOKEN=
+GMAIL_SENDER_EMAIL=
+GMAIL_SENDER_NAME=PostDrop
 PAYOS_CLIENT_ID=
 PAYOS_API_KEY=
 PAYOS_CHECKSUM_KEY=
@@ -518,7 +519,7 @@ the current canonical record from Supabase before executing a job.
 - Use the Supabase project for PostgreSQL, Auth, and Storage.
 - Use the Supabase CLI for SQL migrations and seed data.
 - Run Redis through Docker Compose.
-- Use a Resend test domain and payOS test flow.
+- Use the authorized Gmail test account and payOS test flow.
 - Accelerate scheduled timestamps in automated tests.
 
 ### Deployed demo

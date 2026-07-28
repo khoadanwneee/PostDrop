@@ -5,6 +5,12 @@ interface Environment {
   SUPABASE_PUBLISHABLE_KEY: string;
   SUPABASE_SERVICE_ROLE_KEY: string;
   LETTER_ENCRYPTION_KEY: string;
+  GMAIL_CLIENT_ID?: string;
+  GMAIL_CLIENT_SECRET?: string;
+  GMAIL_REFRESH_TOKEN?: string;
+  GMAIL_SENDER_EMAIL?: string;
+  GMAIL_SENDER_NAME?: string;
+  GMAIL_OAUTH_PORT?: string;
   REDIS_HOST?: string;
   REDIS_PORT?: string;
   REDIS_USERNAME?: string;
@@ -44,6 +50,7 @@ export function validateEnvironment(config: Record<string, unknown>): Environmen
     'OUTBOX_POLL_INTERVAL_MS',
     'RECONCILIATION_INTERVAL_MS',
     'SCHEDULER_LOCK_TIMEOUT_SECONDS',
+    'GMAIL_OAUTH_PORT',
   ];
   for (const key of positiveIntegerKeys) {
     if (config[key] === undefined || config[key] === '') {
@@ -60,6 +67,24 @@ export function validateEnvironment(config: Record<string, unknown>): Environmen
     !['true', 'false'].includes(String(config.REDIS_TLS))
   ) {
     throw new Error('REDIS_TLS must be true or false');
+  }
+
+  const gmailKeys = [
+    'GMAIL_CLIENT_ID',
+    'GMAIL_CLIENT_SECRET',
+    'GMAIL_REFRESH_TOKEN',
+    'GMAIL_SENDER_EMAIL',
+  ] as const;
+  const configuredGmailKeys = gmailKeys.filter(
+    (key) => typeof config[key] === 'string' && config[key].length > 0,
+  );
+  if (
+    configuredGmailKeys.length > 0 &&
+    configuredGmailKeys.length !== gmailKeys.length
+  ) {
+    throw new Error(
+      'GMAIL_CLIENT_ID, GMAIL_CLIENT_SECRET, GMAIL_REFRESH_TOKEN, and GMAIL_SENDER_EMAIL must be configured together',
+    );
   }
 
   return config as unknown as Environment;

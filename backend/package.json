@@ -18,7 +18,9 @@
     "db:push": "supabase db push --workdir ..",
     "redis:start": "docker compose -f compose.redis.yaml up -d",
     "redis:stop": "docker compose -f compose.redis.yaml down",
-    "assets:sync-built-in": "node --env-file=.env -r ts-node/register scripts/sync-built-in-assets.ts"
+    "assets:sync-built-in": "node --env-file=.env -r ts-node/register scripts/sync-built-in-assets.ts",
+    "gmail:authorize": "node --env-file=.env -r ts-node/register scripts/gmail-authorize.ts",
+    "email:test:gmail": "node --env-file=.env -r ts-node/register scripts/send-gmail-test-email.ts"
   },
   "dependencies": {
     "@nestjs/bullmq": "^11.0.4",
@@ -32,6 +34,7 @@
     "bullmq": "^5.81.2",
     "class-transformer": "^0.5.1",
     "class-validator": "^0.14.2",
+    "google-auth-library": "^10.9.1",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.2"
   },

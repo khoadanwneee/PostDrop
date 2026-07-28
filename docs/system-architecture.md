@@ -43,9 +43,9 @@ flowchart LR
     Worker --> Redis
 ~~~
 
-Có scheduler/outbox relay, Redis/BullMQ và processor idempotent để release thư
-digital. Chưa có email delivery provider/processor, payment provider hoặc
-physical-delivery integration.
+Có scheduler/outbox relay, Redis/BullMQ, processor idempotent để release thư
+digital và processor email notification qua Gmail OAuth. Chưa có secure-reveal
+flow, payment provider hoặc physical-delivery integration.
 
 ## 3. Repository và ownership
 
@@ -192,7 +192,9 @@ erDiagram
 
 Scheduler có thể claim action và publish BullMQ job. Processor `release_letter`
 đánh dấu thư digital khả dụng tại thời điểm đã hẹn, hoàn tất action và tạo
-`send_notification` email-only độc lập. Chưa có processor gửi email.
+`send_notification` email-only độc lập. Processor notification ghi durable
+delivery attempt, gửi qua provider đã cấu hình và lưu provider message ID trước
+khi hoàn tất action.
 
 ## 8. Letter lifecycle và encryption
 
@@ -299,8 +301,8 @@ Repository chưa chứa Dockerfile, deployment manifest hay CI workflow. Trạng
 | Frontend API proxy/base URL | Chưa cấu hình |
 | Bearer token trên frontend letter calls | Chưa có |
 | Scheduler claim/outbox relay | Đã có |
-| Worker thực thi scheduled action | Đã có `release_letter`; các processor email/document/fulfillment chưa có |
-| Email delivery | Chưa có |
+| Worker thực thi scheduled action | Đã có `release_letter` và `send_notification`; document/fulfillment chưa có |
+| Email delivery | Đã có Gmail OAuth, durable attempt và duplicate suppression sau khi ghi nhận thành công; chưa có delivery-event tracking |
 | Built-in asset Storage | Đã có schema/API và script đồng bộ |
 | User draft attachment Storage | Đã có signed upload, private RLS và letter links |
 | Encrypted sealed attachment Storage | Đã có bucket backend-only, envelope encryption và checksum |
@@ -362,7 +364,7 @@ Kết quả kiểm tra trên working tree ngày 2026-07-26:
 | NestJS API trước Supabase | Giữ encryption key và business rules ở server | Thêm service phải vận hành |
 | User-scoped Supabase client | RLS vẫn thực thi | Phải quản lý access token đúng ở frontend |
 | Per-letter AES-256-GCM envelope encryption | Text và attachment snapshot dùng key riêng; master key chỉ wrap data key | Key rotation và delivery worker chưa có |
-| Durable `scheduled_actions` table | Không phụ thuộc timer trong process | Mới thực thi release digital; email và physical action vẫn chưa có processor |
+| Durable `scheduled_actions` table | Không phụ thuộc timer trong process | Đã thực thi release digital và email notification; physical action vẫn chưa có processor |
 | PostgreSQL outbox trước BullMQ | Không mất durable intent nếu Redis/process lỗi | Thêm relay và reconciliation phải vận hành |
 
 ## 14. Tài liệu liên quan
