@@ -2,13 +2,21 @@ import { Job } from 'bullmq';
 import { ScheduledActionJob } from './scheduling.types';
 import { LetterReleaseProcessor } from './letter-release.processor';
 import { SchedulingRepository } from './scheduling.repository';
+import { RevealTokenService } from '../reveal/reveal-token.service';
 
 describe('LetterReleaseProcessor', () => {
   const repository = {
     completeLetterRelease: jest.fn(),
     markActionFailed: jest.fn(),
   } as unknown as SchedulingRepository;
-  const processor = new LetterReleaseProcessor(repository);
+  const revealTokens = {
+    capabilityToken: jest.fn().mockReturnValue('stable-capability-token'),
+    hash: jest.fn().mockReturnValue('a'.repeat(64)),
+    capabilityExpiresAt: jest
+      .fn()
+      .mockReturnValue('2026-08-28T00:00:00.000Z'),
+  } as unknown as RevealTokenService;
+  const processor = new LetterReleaseProcessor(repository, revealTokens);
   const data: ScheduledActionJob = {
     scheduledActionId: '11111111-1111-4111-8111-111111111111',
     letterId: '22222222-2222-4222-8222-222222222222',
@@ -33,6 +41,8 @@ describe('LetterReleaseProcessor', () => {
     expect(repository.completeLetterRelease).toHaveBeenCalledWith(
       data.scheduledActionId,
       data.letterId,
+      'a'.repeat(64),
+      '2026-08-28T00:00:00.000Z',
     );
   });
 

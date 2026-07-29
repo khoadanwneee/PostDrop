@@ -112,6 +112,7 @@ Use the following bounded modules:
 - `SchedulingModule`
 - `DeliveriesModule`
 - `NotificationsModule`
+- `RevealModule`
 - `FulfillmentModule`
 - `WebhooksModule`
 - `AuditModule`
@@ -400,7 +401,26 @@ A successful browser redirect must never mark an order as paid.
 Official payOS documentation describes payment links and webhook confirmation:
 [payOS documentation](https://payos.vn/docs/).
 
-## 11. Email delivery
+## 11. Secure digital reveal
+
+Digital release creates one stable, revocable reveal capability. The worker
+derives the bearer value with HMAC-SHA-256 from a dedicated backend secret and
+the immutable letter ID; PostgreSQL stores only its SHA-256 hash. The emailed
+URL keeps the capability in its fragment so an initial navigation, link
+preview, or server log does not receive it.
+
+A deliberate `POST` exchanges the capability for a random, short-lived reveal
+session after the scheduled UTC instant. A second authenticated `POST` records
+the first human reveal and returns the decrypted, versioned presentation.
+Attachments are decrypted and streamed only while the same session is valid
+for the same letter. Capability revocation invalidates all associated sessions.
+
+`reveal_capabilities`, `reveal_sessions`, and append-only `reveal_events` remain
+separate from authoritative letter availability and email-provider delivery
+state. Plain `GET` requests never consume the capability or mark content opened.
+All decrypted responses are private and non-cacheable.
+
+## 12. Email delivery
 
 Keep email delivery behind an `EmailProvider` interface. The student prototype
 uses Gmail OAuth to send as an authorized FIT Google Workspace account without
@@ -420,7 +440,7 @@ Gmail accepts a message but before the database records its ID remains an
 explicit reconciliation concern. Delivery, bounce, and complaint tracking will
 require a future provider or a separately authorized inbox-processing design.
 
-## 12. Physical delivery
+## 13. Physical delivery
 
 Keep carrier-specific behavior behind a `ShippingProvider` interface:
 
@@ -445,7 +465,7 @@ Physical fulfillment also needs an internal operations flow:
 An operations user must never receive database or Supabase service-role access.
 Expose only the minimum required actions through an audited admin API.
 
-## 13. Packages and configuration
+## 14. Packages and configuration
 
 Install these backend packages:
 
@@ -511,7 +531,7 @@ BullModule.forRoot({
 Queue payloads should contain IDs rather than full letter content. Workers load
 the current canonical record from Supabase before executing a job.
 
-## 14. Deployment plan
+## 15. Deployment plan
 
 ### Local development
 
@@ -537,7 +557,7 @@ the current canonical record from Supabase before executing a job.
 - Scale the API independently from workers.
 - Add queue dashboards and alerts for stalled or failed jobs.
 
-## 15. Testing requirements
+## 16. Testing requirements
 
 Tests must cover the failures that could cause a letter to be lost or sent
 twice:
@@ -561,7 +581,7 @@ Use the local Supabase stack and a Redis container for integration tests. Do not
 mock the PostgreSQL function, locking behavior, or BullMQ retry behavior that
 provides delivery correctness.
 
-## 16. Decisions intentionally deferred
+## 17. Decisions intentionally deferred
 
 The following are not needed for the first production rewrite:
 

@@ -51,6 +51,8 @@ describe('GmailEmailProvider', () => {
         recipientName: '<Recipient>',
         letterTitle: 'A & B',
         idempotencyKey: 'send_notification:letter-id',
+        revealUrl:
+          'https://postdrop.example/reveal/letter-id#token=secure-token',
       }),
     ).resolves.toEqual({ providerMessageId: 'gmail-message-id' });
 
@@ -70,6 +72,8 @@ describe('GmailEmailProvider', () => {
       'From: =?UTF-8?B?UG9zdERyb3A=?= <sender@example.edu>',
     );
     expect(mime).toContain('To: <recipient@example.com>');
+    expect(mime).toContain('Content-ID: <postdrop-reveal-qr>');
+    expect(mime).toContain('Content-Type: image/png');
     expect(mime).not.toContain('refresh-token');
   });
 
@@ -85,6 +89,8 @@ describe('GmailEmailProvider', () => {
         recipientName: 'Recipient',
         letterTitle: 'Letter',
         idempotencyKey: 'send_notification:letter-id',
+        revealUrl:
+          'https://postdrop.example/reveal/letter-id#token=secure-token',
       }),
     ).rejects.toThrow('GMAIL_AUTHENTICATED_SENDER_MISMATCH');
     expect(request).not.toHaveBeenCalled();
@@ -99,6 +105,8 @@ describe('GmailEmailProvider', () => {
         recipientName: 'Recipient',
         letterTitle: 'Letter',
         idempotencyKey: 'send_notification:letter-id',
+        revealUrl:
+          'https://postdrop.example/reveal/letter-id#token=secure-token',
       }),
     ).rejects.toThrow('GMAIL_RECIPIENT_EMAIL_INVALID');
     expect(request).not.toHaveBeenCalled();
@@ -117,6 +125,8 @@ describe('GmailEmailProvider', () => {
         recipientName: 'Recipient',
         letterTitle: 'Letter',
         idempotencyKey: 'send_notification:letter-id',
+        revealUrl:
+          'https://postdrop.example/reveal/letter-id#token=secure-token',
       }),
     ).rejects.toThrow('GMAIL_SEND_FAILED_403');
   });

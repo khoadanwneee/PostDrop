@@ -4,12 +4,16 @@ import { Job } from 'bullmq';
 import { DELIVERY_QUEUE } from '../queue/queue.constants';
 import { ScheduledActionJob } from './scheduling.types';
 import { SchedulingRepository } from './scheduling.repository';
+import { RevealTokenService } from '../reveal/reveal-token.service';
 
 @Processor(DELIVERY_QUEUE)
 export class LetterReleaseProcessor extends WorkerHost {
   private readonly logger = new Logger(LetterReleaseProcessor.name);
 
-  constructor(private readonly repository: SchedulingRepository) {
+  constructor(
+    private readonly repository: SchedulingRepository,
+    private readonly revealTokens: RevealTokenService,
+  ) {
     super();
   }
 
@@ -24,6 +28,10 @@ export class LetterReleaseProcessor extends WorkerHost {
     const newlyReleased = await this.repository.completeLetterRelease(
       job.data.scheduledActionId,
       job.data.letterId,
+      this.revealTokens.hash(
+        this.revealTokens.capabilityToken(job.data.letterId),
+      ),
+      this.revealTokens.capabilityExpiresAt(),
     );
 
     if (newlyReleased) {

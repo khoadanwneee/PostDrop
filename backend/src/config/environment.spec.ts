@@ -6,6 +6,8 @@ describe('validateEnvironment', () => {
     SUPABASE_PUBLISHABLE_KEY: 'test-key',
     SUPABASE_SERVICE_ROLE_KEY: 'test-service-role-key',
     LETTER_ENCRYPTION_KEY: Buffer.alloc(32, 1).toString('base64'),
+    REVEAL_TOKEN_SECRET: Buffer.alloc(32, 2).toString('base64'),
+    PUBLIC_APP_URL: 'http://localhost:3000',
   };
 
   it('accepts a complete environment', () => {
@@ -31,6 +33,21 @@ describe('validateEnvironment', () => {
         LETTER_ENCRYPTION_KEY: Buffer.alloc(16).toString('base64'),
       }),
     ).toThrow('base64-encoded 32-byte key');
+  });
+
+  it('rejects an invalid reveal token secret or public app URL', () => {
+    expect(() =>
+      validateEnvironment({
+        ...valid,
+        REVEAL_TOKEN_SECRET: Buffer.alloc(16).toString('base64'),
+      }),
+    ).toThrow('REVEAL_TOKEN_SECRET must be a base64-encoded 32-byte key');
+    expect(() =>
+      validateEnvironment({
+        ...valid,
+        PUBLIC_APP_URL: 'javascript:alert(1)',
+      }),
+    ).toThrow('PUBLIC_APP_URL must be an HTTP(S)');
   });
 
   it('rejects invalid Redis and scheduler configuration', () => {

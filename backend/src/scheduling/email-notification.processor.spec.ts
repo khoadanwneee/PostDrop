@@ -3,6 +3,7 @@ import { EmailProvider } from '../email/email-provider';
 import { EmailNotificationProcessor } from './email-notification.processor';
 import { SchedulingRepository } from './scheduling.repository';
 import { ScheduledActionJob } from './scheduling.types';
+import { RevealTokenService } from '../reveal/reveal-token.service';
 
 describe('EmailNotificationProcessor', () => {
   const repository = {
@@ -14,7 +15,18 @@ describe('EmailNotificationProcessor', () => {
   const provider = {
     sendLetterAvailable: jest.fn(),
   } as unknown as EmailProvider;
-  const processor = new EmailNotificationProcessor(repository, provider);
+  const revealTokens = {
+    revealUrl: jest
+      .fn()
+      .mockReturnValue(
+        'http://localhost:3000/reveal/22222222-2222-4222-8222-222222222222#token=secure',
+      ),
+  } as unknown as RevealTokenService;
+  const processor = new EmailNotificationProcessor(
+    repository,
+    provider,
+    revealTokens,
+  );
   const data: ScheduledActionJob = {
     scheduledActionId: '11111111-1111-4111-8111-111111111111',
     letterId: '22222222-2222-4222-8222-222222222222',
@@ -53,6 +65,8 @@ describe('EmailNotificationProcessor', () => {
       recipientName: prepared.recipient_name,
       letterTitle: prepared.letter_title,
       idempotencyKey: data.idempotencyKey,
+      revealUrl:
+        'http://localhost:3000/reveal/22222222-2222-4222-8222-222222222222#token=secure',
     });
     expect(repository.prepareEmailNotification).toHaveBeenCalledWith(
       data.scheduledActionId,

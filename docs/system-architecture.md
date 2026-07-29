@@ -44,8 +44,9 @@ flowchart LR
 ~~~
 
 Có scheduler/outbox relay, Redis/BullMQ, processor idempotent để release thư
-digital và processor email notification qua Gmail OAuth. Chưa có secure-reveal
-flow, payment provider hoặc physical-delivery integration.
+digital, processor email notification qua Gmail OAuth, và secure-reveal với
+hashed capability, session ngắn hạn và authorized decryption. Chưa có payment
+provider hoặc physical-delivery integration.
 
 ## 3. Repository và ownership
 
@@ -84,7 +85,8 @@ AppModule
 ├─ EncryptionModule    # AES-256-GCM envelope encryption
 ├─ AuthModule          # register/login/refresh/logout/me
 ├─ LettersModule       # CRUD, dashboard, seal
-└─ AssetsModule        # built-in catalog, signed uploads, letter attachments
+├─ AssetsModule        # built-in catalog, signed uploads, letter attachments
+└─ RevealModule        # capability/session, decrypt và attachment stream
 
 WorkerModule
 ├─ ConfigModule
@@ -119,6 +121,9 @@ API dùng global prefix `/api`, `ValidationPipe` với whitelist, transform và 
 | `DELETE` | `/api/assets/:id` | Bearer | Đã có |
 | `GET/POST` | `/api/letters/:id/attachments` | Bearer | Đã có |
 | `PATCH/DELETE` | `/api/letters/:id/attachments/:attachmentId` | Bearer | Đã có |
+| `POST` | `/api/reveal/exchange` | Reveal capability | Đã có |
+| `POST` | `/api/reveal/content` | Reveal-session Bearer | Đã có |
+| `GET` | `/api/reveal/:letterId/attachments/:attachmentId` | Reveal-session Bearer | Đã có |
 
 Frontend hiện gọi một số letter endpoints mà không gửi Bearer token, nên các request đó sẽ bị `AuthGuard` từ chối khi đi tới backend thật.
 
@@ -189,12 +194,21 @@ erDiagram
 | `media_assets` | Catalog cho built-in asset và upload riêng của user |
 | `letter_attachments` | Liên kết asset với letter, gồm vị trí/scale/rotation |
 | `sealed_letter_attachments` | Snapshot ciphertext, checksum và encryption metadata của attachment đã seal |
+| `reveal_capabilities` | Stable capability hash, expiry, revocation và access policy |
+| `reveal_sessions` | Short-lived session hash gắn với đúng một letter/capability |
+| `reveal_events` | Append-only audit cho capability, session, human reveal và attachment access |
 
 Scheduler có thể claim action và publish BullMQ job. Processor `release_letter`
 đánh dấu thư digital khả dụng tại thời điểm đã hẹn, hoàn tất action và tạo
 `send_notification` email-only độc lập. Processor notification ghi durable
 delivery attempt, gửi qua provider đã cấu hình và lưu provider message ID trước
 khi hoàn tất action.
+
+Release transaction đồng thời tạo đúng một reveal capability đã hash. Email
+chứa URL fragment và QR code; `POST /reveal/exchange` kiểm tra thời điểm release,
+expiry và revocation trước khi cấp session 15 phút. Chỉ session hợp lệ mới gọi
+được deliberate content reveal hoặc attachment stream. Plain `GET` không đổi
+trạng thái human-open.
 
 ## 8. Letter lifecycle và encryption
 
@@ -303,6 +317,7 @@ Repository chưa chứa Dockerfile, deployment manifest hay CI workflow. Trạng
 | Scheduler claim/outbox relay | Đã có |
 | Worker thực thi scheduled action | Đã có `release_letter` và `send_notification`; document/fulfillment chưa có |
 | Email delivery | Đã có Gmail OAuth, durable attempt và duplicate suppression sau khi ghi nhận thành công; chưa có delivery-event tracking |
+| Secure reveal | Đã có hashed/revocable capability, time gate, session ngắn hạn, authorized decrypt, QR link và reveal audit; frontend reveal UI chưa nối |
 | Built-in asset Storage | Đã có schema/API và script đồng bộ |
 | User draft attachment Storage | Đã có signed upload, private RLS và letter links |
 | Encrypted sealed attachment Storage | Đã có bucket backend-only, envelope encryption và checksum |
@@ -341,19 +356,22 @@ npm run db:reset
 npm run db:lint
 ~~~
 
-Database migration hiện chưa có pgTAP security test trong repository. Cần kiểm tra local Supabase/Docker riêng trước khi khẳng định migration và RLS đã pass end-to-end.
+Database migration hiện chưa có pgTAP security suite. Repository có
+rollback-only SQL smoke test cho secure reveal và đã chạy nó trên local
+Supabase/PostgreSQL sau reset/lint sạch.
 
-Kết quả kiểm tra trên working tree ngày 2026-07-26:
+Kết quả kiểm tra trên working tree ngày 2026-07-29:
 
 - Frontend Jest: 2 suites, 18 tests pass.
 - Frontend ESLint: pass.
 - Frontend Next.js production build: pass; 3 static pages generated.
-- Backend Jest: 9 suites, 36 tests pass.
+- Backend Jest: 15 suites, 57 tests pass.
 - Backend NestJS production build: pass.
 - Frontend `npm ci` báo 3 dependency vulnerabilities mức high; chưa chạy force-fix vì có thể tạo breaking change.
-- Local Supabase reset đã apply migrations `001`–`007`; database lint không báo
-  schema error. Smoke test xác nhận release digital đặt `available_at`, hoàn tất
-  action và tạo đúng một action email-only `send_notification`.
+- Local Supabase reset đã apply migrations `001`–`009`; database lint không báo
+  schema error. Rollback-only smoke test xác nhận release digital tạo đúng một
+  hashed capability, từ chối reveal sớm/sai/revoked/expired/cross-letter, cấp
+  session ngắn hạn, ghi human reveal idempotently và revoke mọi session.
 
 ## 13. Quyết định và trade-off hiện tại
 
@@ -363,7 +381,8 @@ Kết quả kiểm tra trên working tree ngày 2026-07-26:
 | Next.js static export | Hosting đơn giản | Không có built-in API proxy/runtime rewrite |
 | NestJS API trước Supabase | Giữ encryption key và business rules ở server | Thêm service phải vận hành |
 | User-scoped Supabase client | RLS vẫn thực thi | Phải quản lý access token đúng ở frontend |
-| Per-letter AES-256-GCM envelope encryption | Text và attachment snapshot dùng key riêng; master key chỉ wrap data key | Key rotation và delivery worker chưa có |
+| Per-letter AES-256-GCM envelope encryption | Text và attachment snapshot dùng key riêng; master key chỉ wrap data key | Key rotation chưa có |
+| Hashed reveal capability + short-lived session | Database không lưu bearer capability/session plaintext; link scanner không tạo human-open | Frontend phải xử lý URL fragment và session lifecycle |
 | Durable `scheduled_actions` table | Không phụ thuộc timer trong process | Đã thực thi release digital và email notification; physical action vẫn chưa có processor |
 | PostgreSQL outbox trước BullMQ | Không mất durable intent nếu Redis/process lỗi | Thêm relay và reconciliation phải vận hành |
 

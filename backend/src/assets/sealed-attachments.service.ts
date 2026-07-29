@@ -208,6 +208,7 @@ export class SealedAttachmentsService {
 
   async decryptSealedAttachment(
     sealedAttachmentId: string,
+    expectedLetterId?: string,
   ): Promise<DecryptedSealedAttachment> {
     const serviceSupabase = this.supabaseService.createServiceClient();
     const { data: sealedData, error: sealedError } = await serviceSupabase
@@ -235,6 +236,9 @@ export class SealedAttachmentsService {
       throw new NotFoundException('Sealed attachment not found');
     }
     const sealed = sealedData as unknown as SealedAttachmentRow;
+    if (expectedLetterId && sealed.letter_id !== expectedLetterId) {
+      throw new NotFoundException('Sealed attachment not found');
+    }
 
     if (
       sealed.encryption_version !==

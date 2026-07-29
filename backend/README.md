@@ -3,7 +3,9 @@
 This backend implements Supabase authentication, letter management, media
 storage, durable PostgreSQL scheduling, a BullMQ/Redis outbox relay, and
 Gmail OAuth notifications for released digital letters through the focused
-Google authentication client and Gmail REST endpoint. Payments, document
+Google authentication client and Gmail REST endpoint. Released letters use
+hashed, revocable capabilities and short-lived reveal sessions before the
+backend decrypts content or attachments. Payments, document
 processing, and physical fulfillment are deferred.
 
 ## Included
@@ -24,6 +26,12 @@ processing, and physical fulfillment are deferred.
 - Draft-only attachment and decoration placement on letters.
 - Backend-only encrypted attachment snapshots in `sealed-attachments`.
 - SHA-256 integrity checks and worker-facing attachment decryption.
+- Stable reveal capabilities with only SHA-256 hashes stored in PostgreSQL.
+- Time-gated exchange into random 15-minute reveal sessions.
+- Authorized letter decryption and controlled, non-cacheable attachment streams.
+- Immutable renderer-version and presentation metadata captured at sealing.
+- Secure reveal links and embedded QR codes in Gmail notifications.
+- Separate reveal events for capability, session, content, and attachment access.
 - Reproducible Supabase migrations and seed data under `../supabase/`.
 - Swagger UI at `/api/docs`.
 
@@ -58,11 +66,17 @@ npm run redis:start
 
 The command prints the local API URL, publishable/anonymous key, and service-role
 key. Copy `.env.example` to `.env`, fill in both Supabase keys, configure the
-selected email provider for the worker, and generate an encryption key:
+selected email provider for the worker, and generate separate encryption and
+reveal-token keys:
 
 ```bash
 openssl rand -base64 32
+openssl rand -base64 32
 ```
+
+Set the first value as `LETTER_ENCRYPTION_KEY`, the second as
+`REVEAL_TOKEN_SECRET`, and set `PUBLIC_APP_URL` to the frontend origin or base
+path used in notification links.
 
 Reset the local database whenever migrations or seed data change:
 
@@ -273,8 +287,28 @@ delivery attempt, sends through Gmail OAuth, and atomically persists the Gmail
 message ID. Replayed jobs skip sends already recorded as
 successful. Gmail uses OAuth refresh credentials—never a Google password or app
 password. The email is notification-only and does not contain plaintext letter
-content or an insecure reveal link. Document and fulfillment processors are
-still deferred.
+content. It contains a secure reveal link and locally generated QR code; the
+capability stays in the URL fragment so it is not sent in the initial HTTP
+request. Document and fulfillment processors are still deferred.
+
+## Secure reveal
+
+The release worker derives one stable capability from the letter ID and the
+backend-only `REVEAL_TOKEN_SECRET`. PostgreSQL receives and stores only its
+SHA-256 hash. The capability expires after 30 days and can be revoked together
+with every issued session.
+
+| Method | Endpoint | Credential | Purpose |
+| --- | --- | --- | --- |
+| `POST` | `/api/reveal/exchange` | Capability in JSON | Enforce release time and issue a random 15-minute session |
+| `POST` | `/api/reveal/content` | Reveal-session Bearer | Record a deliberate reveal and return the decrypted versioned presentation |
+| `GET` | `/api/reveal/:letterId/attachments/:attachmentId` | Reveal-session Bearer | Stream one authorized decrypted attachment |
+
+Plain `GET` requests never exchange or consume the emailed capability and never
+record a human content reveal. The frontend must read the capability from the
+URL fragment, remove it from browser-visible history, and deliberately call the
+exchange endpoint. Decrypted JSON and attachment responses use
+`Cache-Control: no-store, private`.
 
 For Gmail OAuth setup and a direct live-send check:
 
@@ -294,4 +328,7 @@ periodic reauthorization.
 npm run db:lint
 npm test
 npm run build
+/Library/PostgreSQL/18/bin/psql \
+  postgresql://postgres:postgres@127.0.0.1:54322/postgres \
+  -f scripts/secure-reveal-smoke.sql
 ```

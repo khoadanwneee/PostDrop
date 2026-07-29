@@ -30,6 +30,10 @@ function encodeBody(value: string): string {
   return Buffer.from(value, 'utf8').toString('base64');
 }
 
+function encodeBuffer(value: Buffer): string {
+  return value.toString('base64');
+}
+
 function googleErrorCode(error: unknown): string {
   if (
     typeof error === 'object' &&
@@ -85,28 +89,41 @@ export class GmailEmailProvider implements EmailProvider {
   ): Promise<EmailSendResult> {
     await this.verifyAuthenticatedSender();
     const recipient = assertEmailAddress(message.to, 'GMAIL_RECIPIENT_EMAIL');
-    const email = renderLetterAvailableEmail(message);
-    const boundary = `postdrop-${Buffer.from(message.idempotencyKey)
+    const email = await renderLetterAvailableEmail(message);
+    const boundarySuffix = Buffer.from(message.idempotencyKey)
       .toString('base64url')
-      .slice(0, 48)}`;
+      .slice(0, 40);
+    const relatedBoundary = `postdrop-related-${boundarySuffix}`;
+    const alternativeBoundary = `postdrop-alternative-${boundarySuffix}`;
     const raw = [
       `From: ${encodeHeader(this.senderName)} <${this.senderEmail}>`,
       `To: <${recipient}>`,
       `Subject: ${encodeHeader(email.subject)}`,
       'MIME-Version: 1.0',
-      `Content-Type: multipart/alternative; boundary="${boundary}"`,
+      `Content-Type: multipart/related; boundary="${relatedBoundary}"`,
       '',
-      `--${boundary}`,
+      `--${relatedBoundary}`,
+      `Content-Type: multipart/alternative; boundary="${alternativeBoundary}"`,
+      '',
+      `--${alternativeBoundary}`,
       'Content-Type: text/plain; charset="UTF-8"',
       'Content-Transfer-Encoding: base64',
       '',
       encodeBody(email.text),
-      `--${boundary}`,
+      `--${alternativeBoundary}`,
       'Content-Type: text/html; charset="UTF-8"',
       'Content-Transfer-Encoding: base64',
       '',
       encodeBody(email.html),
-      `--${boundary}--`,
+      `--${alternativeBoundary}--`,
+      `--${relatedBoundary}`,
+      'Content-Type: image/png',
+      'Content-Transfer-Encoding: base64',
+      'Content-ID: <postdrop-reveal-qr>',
+      'Content-Disposition: inline; filename="postdrop-reveal.png"',
+      '',
+      encodeBuffer(email.qrCode),
+      `--${relatedBoundary}--`,
       '',
     ].join('\r\n');
 

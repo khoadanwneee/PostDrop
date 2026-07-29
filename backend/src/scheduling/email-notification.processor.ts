@@ -5,6 +5,7 @@ import { EMAIL_PROVIDER, EmailProvider } from '../email/email-provider';
 import { NOTIFICATIONS_QUEUE } from '../queue/queue.constants';
 import { SchedulingRepository } from './scheduling.repository';
 import { ScheduledActionJob } from './scheduling.types';
+import { RevealTokenService } from '../reveal/reveal-token.service';
 
 @Processor(NOTIFICATIONS_QUEUE)
 export class EmailNotificationProcessor extends WorkerHost {
@@ -13,6 +14,7 @@ export class EmailNotificationProcessor extends WorkerHost {
   constructor(
     private readonly repository: SchedulingRepository,
     @Inject(EMAIL_PROVIDER) private readonly emailProvider: EmailProvider,
+    private readonly revealTokens: RevealTokenService,
   ) {
     super();
   }
@@ -38,6 +40,7 @@ export class EmailNotificationProcessor extends WorkerHost {
       recipientName: notification.recipient_name,
       letterTitle: notification.letter_title,
       idempotencyKey: notification.idempotency_key,
+      revealUrl: this.revealTokens.revealUrl(job.data.letterId),
     });
 
     await this.repository.completeEmailNotification(

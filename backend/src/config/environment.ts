@@ -5,6 +5,8 @@ interface Environment {
   SUPABASE_PUBLISHABLE_KEY: string;
   SUPABASE_SERVICE_ROLE_KEY: string;
   LETTER_ENCRYPTION_KEY: string;
+  REVEAL_TOKEN_SECRET: string;
+  PUBLIC_APP_URL: string;
   GMAIL_CLIENT_ID?: string;
   GMAIL_CLIENT_SECRET?: string;
   GMAIL_REFRESH_TOKEN?: string;
@@ -30,6 +32,8 @@ export function validateEnvironment(config: Record<string, unknown>): Environmen
     'SUPABASE_PUBLISHABLE_KEY',
     'SUPABASE_SERVICE_ROLE_KEY',
     'LETTER_ENCRYPTION_KEY',
+    'REVEAL_TOKEN_SECRET',
+    'PUBLIC_APP_URL',
   ] as const;
 
   for (const key of required) {
@@ -41,6 +45,32 @@ export function validateEnvironment(config: Record<string, unknown>): Environmen
   const encryptionKey = Buffer.from(config.LETTER_ENCRYPTION_KEY as string, 'base64');
   if (encryptionKey.length !== 32) {
     throw new Error('LETTER_ENCRYPTION_KEY must be a base64-encoded 32-byte key');
+  }
+
+  const revealTokenSecret = Buffer.from(
+    config.REVEAL_TOKEN_SECRET as string,
+    'base64',
+  );
+  if (revealTokenSecret.length !== 32) {
+    throw new Error('REVEAL_TOKEN_SECRET must be a base64-encoded 32-byte key');
+  }
+
+  let publicAppUrl: URL;
+  try {
+    publicAppUrl = new URL(config.PUBLIC_APP_URL as string);
+  } catch {
+    throw new Error('PUBLIC_APP_URL must be a valid absolute URL');
+  }
+  if (
+    !['http:', 'https:'].includes(publicAppUrl.protocol) ||
+    publicAppUrl.username ||
+    publicAppUrl.password ||
+    publicAppUrl.search ||
+    publicAppUrl.hash
+  ) {
+    throw new Error(
+      'PUBLIC_APP_URL must be an HTTP(S) origin or base path without credentials, query, or fragment',
+    );
   }
 
   const positiveIntegerKeys = [

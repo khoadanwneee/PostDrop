@@ -76,11 +76,15 @@ export class SchedulingRepository {
   async completeLetterRelease(
     scheduledActionId: string,
     letterId: string,
+    revealTokenHash: string,
+    revealExpiresAt: string,
   ): Promise<boolean> {
     const supabase = this.supabaseService.createServiceClient();
     const { data, error } = await supabase.rpc('complete_letter_release', {
       p_scheduled_action_id: scheduledActionId,
       p_letter_id: letterId,
+      p_reveal_token_hash: revealTokenHash,
+      p_reveal_expires_at: revealExpiresAt,
     });
     this.throwOnError(error);
     return data === true;

@@ -3,6 +3,7 @@ export interface LetterAvailableEmail {
   recipientName: string;
   letterTitle: string;
   idempotencyKey: string;
+  revealUrl: string;
 }
 
 export interface EmailSendResult {

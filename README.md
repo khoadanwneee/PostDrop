@@ -96,6 +96,9 @@ Form có validation trực tiếp, tự lưu nháp vào `localStorage`, hỗ tr�
 | `POST` | `/api/assets/:id/complete` | Xác minh và hoàn tất upload |
 | `GET/POST` | `/api/letters/:id/attachments` | Đọc hoặc gắn media vào bản nháp |
 | `PATCH/DELETE` | `/api/letters/:id/attachments/:attachmentId` | Sửa vị trí hoặc gỡ media |
+| `POST` | `/api/reveal/exchange` | Đổi secure capability lấy reveal session ngắn hạn |
+| `POST` | `/api/reveal/content` | Authorize và giải mã presentation đã niêm phong |
+| `GET` | `/api/reveal/:letterId/attachments/:attachmentId` | Stream attachment qua reveal session |
 
 Database schema, RLS policies, functions và seed data nằm trong thư mục
 `supabase/` để có thể dựng lại bằng Supabase CLI mà không cần tạo thủ công trên
