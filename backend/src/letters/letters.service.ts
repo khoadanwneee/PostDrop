@@ -259,6 +259,17 @@ export class LettersService {
     return this.toResponse(data as unknown as LetterRow);
   }
 
+  async assertReadyForSealing(
+    supabase: SupabaseClient,
+    id: string,
+  ): Promise<void> {
+    const current = await this.findSecretRow(supabase, id);
+    if (current.content_status !== 'draft') {
+      throw new ConflictException('The letter has already been sealed');
+    }
+    this.validateForSealing(current);
+  }
+
   private async sealStoredOriginal(ownerId: string, id: string) {
     const serviceSupabase = this.supabaseService.createServiceClient();
     const { data, error } = await serviceSupabase

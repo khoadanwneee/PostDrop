@@ -6,6 +6,7 @@ import { AuthModule } from './auth/auth.module';
 import { validateEnvironment } from './config/environment';
 import { EncryptionModule } from './encryption/encryption.module';
 import { LettersModule } from './letters/letters.module';
+import { PaymentsModule } from './payments/payments.module';
 import { RevealModule } from './reveal/reveal.module';
 import { SchedulingModule } from './scheduling/scheduling.module';
 import { SupabaseModule } from './supabase/supabase.module';
@@ -21,6 +22,7 @@ import { SupabaseModule } from './supabase/supabase.module';
     AuthModule,
     LettersModule,
     AssetsModule,
+    PaymentsModule,
     RevealModule,
     SchedulingModule,
   ],

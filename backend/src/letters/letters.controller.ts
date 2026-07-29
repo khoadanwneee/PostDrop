@@ -66,9 +66,4 @@ export class LettersController {
   ) {
     await this.lettersService.remove(auth.supabase, id);
   }
-
-  @Post(':id/seal')
-  seal(@CurrentAuth() auth: CurrentAuthValue, @Param('id') id: string) {
-    return this.lettersService.seal(auth.supabase, auth.user.id, id);
-  }
 }

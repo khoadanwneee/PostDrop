@@ -5,8 +5,9 @@ storage, durable PostgreSQL scheduling, a BullMQ/Redis outbox relay, and
 Gmail OAuth notifications for released digital letters through the focused
 Google authentication client and Gmail REST endpoint. Released letters use
 hashed, revocable capabilities and short-lived reveal sessions before the
-backend decrypts content or attachments. Payments, document
-processing, and physical fulfillment are deferred.
+backend decrypts content or attachments. A development-only mock payment
+provider now gates sealing behind authoritative order and payment records.
+Document processing and physical-fulfillment execution remain deferred.
 
 ## Included
 
@@ -30,6 +31,12 @@ processing, and physical fulfillment are deferred.
 - Time-gated exchange into random 15-minute reveal sessions.
 - Authorized letter decryption and controlled, non-cacheable attachment streams.
 - Immutable renderer-version and presentation metadata captured at sealing.
+- Server-priced mock checkout with authoritative `orders`, `payments`, and
+  deduplicated `payment_events`.
+- Development controls for successful, failed, cancelled, and refunded mock
+  payments.
+- Paid sealing: authenticated callers can no longer invoke the sealing route
+  directly.
 - Secure reveal links and embedded QR codes in Gmail notifications.
 - Separate reveal events for capability, session, content, and attachment access.
 - Reproducible Supabase migrations and seed data under `../supabase/`.
@@ -174,11 +181,66 @@ unrelated domains, the cookie and CSRF design must be revisited.
 | `GET` | `/api/letters/:id` | Read letter metadata and draft content |
 | `PATCH` | `/api/letters/:id` | Update a draft |
 | `DELETE` | `/api/letters/:id` | Delete a draft |
-| `POST` | `/api/letters/:id/seal` | Encrypt and schedule a letter |
 
-After sealing, plaintext content is removed from the database response, every
-attached asset has an encrypted immutable snapshot, and the letter can no longer
-be edited or deleted.
+Letters are sealed through the payment flow below. After sealing, plaintext
+content is removed from the database response, every attached asset has an
+encrypted immutable snapshot, and the letter can no longer be edited or deleted.
+
+## Mock payment endpoints
+
+Mock payments are intentionally rejected when `NODE_ENV=production`. They never
+contact a provider or transfer money.
+
+| Method | Endpoint | Description |
+| --- | --- | --- |
+| `POST` | `/api/payments/checkout` | Create or reuse a server-priced checkout |
+| `GET` | `/api/payments/:id` | Read the authenticated owner's payment state |
+| `POST` | `/api/payments/:id/mock/complete` | Confirm payment and seal the letter |
+| `POST` | `/api/payments/:id/mock/fail` | Simulate a failed payment |
+| `POST` | `/api/payments/:id/mock/cancel` | Simulate cancellation |
+| `POST` | `/api/payments/:id/mock/refund` | Refund a successful mock payment |
+
+Create checkout with the draft letter ID:
+
+```json
+{
+  "letterId": "22222222-2222-4222-8222-222222222222"
+}
+```
+
+The `mock-v1` amounts are explicit engineering placeholders: 10,000 VND for a
+digital letter, 20,000 VND for a printed-design letter, and 30,000 VND for a
+stored original. They are not production pricing. The response includes the
+available development action paths and a provider-style `checkoutUrl`.
+
+`checkoutUrl` points to the future frontend route configured by the existing
+`PUBLIC_APP_URL` setting:
+
+```text
+http://localhost:3000/checkout?paymentId=<uuid>&token=<opaque-token>
+```
+
+The opaque token is random, expires after 15 minutes, and is stored only as a
+SHA-256 hash. A frontend checkout page can parse `paymentId` and `token`, then
+use these public provider-style endpoints without the user's access token:
+
+| Method | Endpoint | Description |
+| --- | --- | --- |
+| `GET` | `/api/mock-payments/:id?token=...` | Load safe checkout details and status |
+| `POST` | `/api/mock-payments/:id/complete?token=...` | Simulate successful payment |
+| `POST` | `/api/mock-payments/:id/fail?token=...` | Simulate provider failure |
+| `POST` | `/api/mock-payments/:id/cancel?token=...` | Simulate customer cancellation |
+
+These routes expose merchant, product, amount, currency, expiration, status,
+return URL, and action paths. They never expose the owner, letter content,
+token hash, encryption material, or Supabase credentials. An invalid token
+returns not found and an expired token returns HTTP 410.
+
+Only `complete` invokes the existing encryption, immutable attachment snapshot,
+letter sealing, and scheduling flow. A failed or cancelled attempt can be
+followed by another checkout. Refunding records the commercial state but does
+not reverse an already sealed letter. No frontend checkout or result page is
+included in this backend milestone.
 
 ## Media assets and attachments
 

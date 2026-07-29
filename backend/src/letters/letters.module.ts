@@ -9,5 +9,6 @@ import { LettersService } from './letters.service';
   imports: [AuthModule, EncryptionModule, AssetsModule],
   controllers: [LettersController],
   providers: [LettersService],
+  exports: [LettersService],
 })
 export class LettersModule {}
