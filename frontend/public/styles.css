@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Noto+Serif:ital,wght@0,400;0,600;0,700;1,400&family=Nunito:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Playwrite+VN:wght@400;600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Caveat:wght@400;600&family=Charm:wght@400;700&family=Dancing+Script:wght@400;600&family=Mali:ital,wght@0,400;0,500;0,600;1,400&family=Marck+Script&family=Noto+Serif:ital,wght@0,400;0,600&display=swap');
 
 :root {
   --outer: #efe5d8;
@@ -24,8 +24,8 @@
   --heading: "Nunito", "Be Vietnam Pro", "Segoe UI", "Helvetica Neue", Arial, sans-serif;
   --body: "Nunito", "Be Vietnam Pro", "Segoe UI", "Helvetica Neue", Arial, sans-serif;
   --serif: "Noto Serif", "Times New Roman", serif;
-  --handwritten: "Playwrite VN", "Segoe Print", "Segoe UI", "Helvetica Neue", Arial, sans-serif;
-  --font-letter-heading: "Noto Serif", "Playwrite VN", "Nunito", "Arial", serif;
+  --handwritten: "Shelia", "SVN-Shelia", "UTM Shelia", "Marck Script", "Charm", "Mali", "Dancing Script", cursive, serif;
+  --font-letter-heading: "Shelia", "SVN-Shelia", "UTM Shelia", "Marck Script", "Charm", "Noto Serif", serif;
   --font-letter-body: "Nunito", "Be Vietnam Pro", "Inter", "Arial", sans-serif;
 }
 
@@ -135,6 +135,13 @@ p { color: var(--gray); }
 .nav-actions { display: flex; align-items: center; gap: 12px; }
 .nav-actions .button { min-height: 42px; padding-inline: 17px; font-size: .82rem; }
 .menu-toggle { display: none; width: 44px; height: 44px; border: 1px solid var(--border); background: var(--paper); border-radius: 10px; }
+.app-header { position: sticky; top: 0; z-index: 100; background: var(--paper); border-bottom: 1px solid var(--border); box-shadow: 0 4px 16px rgba(43,37,35,.04); }
+.app-header-inner { display: flex; align-items: center; justify-content: space-between; height: 68px; }
+.app-header-actions { display: flex; align-items: center; gap: 12px; }
+.avatar { display: inline-flex; align-items: center; justify-content: center; width: 40px; height: 40px; border-radius: 50%; background: var(--burgundy); color: #ffffff; font-weight: 700; font-size: 0.85rem; text-decoration: none; border: 2px solid var(--paper); box-shadow: 0 2px 8px rgba(122,38,58,.24); transition: transform 0.2s ease, box-shadow 0.2s ease; cursor: pointer; }
+.avatar:hover { transform: scale(1.06); box-shadow: 0 4px 12px rgba(122,38,58,.36); }
+.icon-button { display: inline-flex; align-items: center; justify-content: center; width: 40px; height: 40px; border-radius: 50%; border: 1px solid var(--border); background: var(--paper); color: var(--charcoal); cursor: pointer; transition: background 0.2s ease, border-color 0.2s ease; }
+.icon-button:hover { background: var(--cream); border-color: var(--terracotta); }
 .hero { position: relative; min-height: max(720px, calc(100dvh - 82px)); margin: 0; display: grid; place-content: center; text-align: center; padding: 118px 72px 106px; overflow: hidden; background-color: var(--paper); }
 .hero::before, .hero::after { display: none; }
 .landing-plane-corner { position: absolute; z-index: 5; top: 20px; right: 42px; width: 210px; height: 150px; pointer-events: none; transform-origin: 78% 22%; will-change: transform, opacity; }
@@ -146,7 +153,7 @@ p { color: var(--gray); }
 .invitation-monogram { position: relative; width: 58px; height: 58px; margin: 0 auto 18px; display: grid; place-items: center; border: 1px solid rgba(122,38,58,.42); border-radius: 50%; color: var(--burgundy); background: var(--paper); box-shadow: 0 0 0 6px rgba(200,107,74,.08); font: 700 1.3rem Georgia, serif; }.invitation-monogram::before, .invitation-monogram::after { content: ""; position: absolute; width: 48px; height: 1px; background: #c9b7a6; }.invitation-monogram::before { transform: translateX(-60px); }.invitation-monogram::after { transform: translateX(60px); }
 .hero-invitation .eyebrow { margin-bottom: 16px; color: var(--burgundy); }
 .hero h1 { max-width: 850px; margin-bottom: 24px; }
-.hero h1.hero-handwritten { max-width: 930px; margin-inline: auto; font-family: var(--handwritten); font-size: clamp(3.7rem, 6.5vw, 5.9rem); font-weight: 600; line-height: 1.12; letter-spacing: 0; }
+.hero h1.hero-handwritten { max-width: 960px; margin-inline: auto; font-family: var(--handwritten); font-size: clamp(3.2rem, 5.8vw, 5.4rem); font-weight: 400; line-height: 1.35; letter-spacing: .01em; }
 .hero h1.hero-handwritten span { display: block; }
 .hero-floral-divider { margin: -5px auto 19px; display: flex; align-items: center; justify-content: center; gap: 10px; }.hero-floral-divider span { width: 44px; height: 1px; background: #c5a66a; }.hero-floral-divider i { width: 7px; height: 7px; border: 1px solid var(--terracotta); transform: rotate(45deg); }
 .hero p { max-width: 650px; margin: 0 auto 34px; font-size: 1.12rem; }
