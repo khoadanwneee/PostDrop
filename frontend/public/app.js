@@ -856,7 +856,10 @@ function bindVideoStep() {
 }
 
 function bindBuilder(step) {
-  document.querySelectorAll('[data-type]').forEach((card) => card.onclick = () => { draft.letterType = card.dataset.type; persistDraft(); renderBuilder(step); });
+  document.querySelectorAll('[data-type]').forEach((card) => card.onclick = () => {
+    if (card.dataset.type === 'handwritten' && !requireLoginForHandwritten(location.hash.slice(1))) return;
+    draft.letterType = card.dataset.type; persistDraft(); renderBuilder(step);
+  });
   document.querySelectorAll('[data-draft]').forEach((control) => control.addEventListener('input', () => {
     draft[control.dataset.draft] = control.value; control.classList.remove('invalid'); document.querySelector(`[data-error="${control.dataset.draft}"]`)?.replaceChildren();
     if (control.id === 'content') { document.querySelector('#word-count').textContent = wordCount(control.value); updatePreview(); }
@@ -1255,6 +1258,19 @@ async function nextStep(step) {
 
 function getAuthToken() { return localStorage.getItem('postdrop_access_token') || ''; }
 function setAuthToken(token) { if (token) localStorage.setItem('postdrop_access_token', token); else localStorage.removeItem('postdrop_access_token'); }
+function isLoggedIn() { return !!getAuthToken(); }
+function requireLoginForHandwritten(redirectHash) {
+  if (isLoggedIn()) return true;
+  if (redirectHash) localStorage.setItem('postdrop_redirect_after_login', redirectHash);
+  toast('Vui lòng đăng nhập để viết thư tay.', 'error');
+  location.hash = '/login';
+  return false;
+}
+function consumeRedirectAfterLogin() {
+  const target = localStorage.getItem('postdrop_redirect_after_login');
+  localStorage.removeItem('postdrop_redirect_after_login');
+  return target || '/dashboard';
+}
 
 async function ensureAuthToken(email, fullName) {
   let token = getAuthToken();
@@ -1489,7 +1505,7 @@ function renderAuth(mode = 'login') {
         if (!res.ok) throw new Error(data.message || 'Đăng ký thất bại');
         if (data.accessToken) setAuthToken(data.accessToken);
         toast('Tạo tài khoản thành công!', 'success');
-        setTimeout(() => location.hash = '/dashboard', 800);
+        setTimeout(() => location.hash = consumeRedirectAfterLogin(), 800);
       } else if (mode === 'login') {
         const res = await fetch('/api/auth/login', {
           method: 'POST',
@@ -1501,7 +1517,7 @@ function renderAuth(mode = 'login') {
         if (!res.ok) throw new Error(data.message || 'Đăng nhập thất bại');
         if (data.accessToken) setAuthToken(data.accessToken);
         toast('Đăng nhập thành công!', 'success');
-        setTimeout(() => location.hash = '/dashboard', 800);
+        setTimeout(() => location.hash = consumeRedirectAfterLogin(), 800);
       } else {
         toast('Đường dẫn đặt lại mật khẩu đã được gửi.', 'success');
         setTimeout(() => location.hash = '/login', 800);
@@ -1522,6 +1538,7 @@ function route() {
   window.scrollTo(0, 0);
   const hash = location.hash.slice(1) || '/';
   if (hash === '/create/resume') {
+    if (draft.letterType === 'handwritten' && !requireLoginForHandwritten(hash)) return;
     const requestedStep = Math.min(6, Math.max(1, Number(draft.lastStep || 1)));
     const resumeStep =
       requestedStep >= 3 && !draft.paperOrientation ? 2 : requestedStep;
@@ -1536,10 +1553,12 @@ function route() {
     if (params.get('new') === '1') {
       const letterType =
         params.get('type') === 'handwritten' ? 'handwritten' : 'online';
+      if (letterType === 'handwritten' && !requireLoginForHandwritten(hash)) return;
       resetDraft(letterType);
       history.replaceState(null, '', `${location.pathname}${location.search}#/create/1`);
       return renderBuilder(1);
     }
+    if (draft.letterType === 'handwritten' && !requireLoginForHandwritten(hash)) return;
     if (
       requestedStep >= 3 &&
       draft.paperOrientation !== 'portrait' &&
