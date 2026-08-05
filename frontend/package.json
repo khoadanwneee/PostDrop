@@ -7,10 +7,7 @@
     "dev": "next dev",
     "build": "next build",
     "lint": "eslint app next.config.ts",
-    "test": "jest --runInBand",
-    "start:api": "node server.js",
-    "start:worker": "node worker.js",
-    "start": "concurrently \"npm run start:api\" \"npm run start:worker\""
+    "test": "jest --runInBand"
   },
   "dependencies": {
     "konva": "^10.3.0",

@@ -7,6 +7,7 @@ import { validateEnvironment } from './config/environment';
 import { EncryptionModule } from './encryption/encryption.module';
 import { LettersModule } from './letters/letters.module';
 import { RevealModule } from './reveal/reveal.module';
+import { SchedulingModule } from './scheduling/scheduling.module';
 import { SupabaseModule } from './supabase/supabase.module';
 
 @Module({
@@ -21,6 +22,7 @@ import { SupabaseModule } from './supabase/supabase.module';
     LettersModule,
     AssetsModule,
     RevealModule,
+    SchedulingModule,
   ],
   controllers: [AppController],
 })
