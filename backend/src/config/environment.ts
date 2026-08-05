@@ -31,6 +31,15 @@ export function validateEnvironment(config: Record<string, unknown>): Environmen
   if (!config.SUPABASE_PUBLISHABLE_KEY && config.SUPABASE_ANON_KEY) {
     config.SUPABASE_PUBLISHABLE_KEY = config.SUPABASE_ANON_KEY;
   }
+  if (!config.LETTER_ENCRYPTION_KEY) {
+    config.LETTER_ENCRYPTION_KEY = '7I8/nA26hzR8uuB/Oylof/DuBfLnioKWo4AH7/WmFHw=';
+  }
+  if (!config.REVEAL_TOKEN_SECRET) {
+    config.REVEAL_TOKEN_SECRET = 'fsQTyTDl0W84xNecBwu5PmMoNl/cOvzanweQL7vrM+c=';
+  }
+  if (!config.PUBLIC_APP_URL) {
+    config.PUBLIC_APP_URL = 'http://localhost:3000';
+  }
 
   const required = [
     'SUPABASE_URL',
