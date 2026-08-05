@@ -13,6 +13,7 @@ interface Environment {
   GMAIL_SENDER_EMAIL?: string;
   GMAIL_SENDER_NAME?: string;
   GMAIL_OAUTH_PORT?: string;
+  REDIS_URL?: string;
   REDIS_HOST?: string;
   REDIS_PORT?: string;
   REDIS_USERNAME?: string;
@@ -27,6 +28,10 @@ interface Environment {
 }
 
 export function validateEnvironment(config: Record<string, unknown>): Environment {
+  if (!config.SUPABASE_PUBLISHABLE_KEY && config.SUPABASE_ANON_KEY) {
+    config.SUPABASE_PUBLISHABLE_KEY = config.SUPABASE_ANON_KEY;
+  }
+
   const required = [
     'SUPABASE_URL',
     'SUPABASE_PUBLISHABLE_KEY',

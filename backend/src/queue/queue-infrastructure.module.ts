@@ -13,21 +13,41 @@ function optionalValue(value: string | undefined): string | undefined {
   return trimmed ? trimmed : undefined;
 }
 
+function parseRedisUrl(redisUrl?: string) {
+  if (!redisUrl?.trim()) return null;
+  try {
+    const parsed = new URL(redisUrl.trim());
+    return {
+      host: parsed.hostname,
+      port: Number(parsed.port || 6379),
+      username: parsed.username ? decodeURIComponent(parsed.username) : undefined,
+      password: parsed.password ? decodeURIComponent(parsed.password) : undefined,
+      tls: parsed.protocol === 'rediss:' ? {} : undefined,
+      maxRetriesPerRequest: null,
+    };
+  } catch {
+    return null;
+  }
+}
+
 @Module({
   imports: [
     BullModule.forRootAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
-      useFactory: (config: ConfigService) => ({
-        connection: {
-          host: config.get<string>('REDIS_HOST') || '127.0.0.1',
-          port: Number(config.get<string>('REDIS_PORT') || 6379),
-          username: optionalValue(config.get<string>('REDIS_USERNAME')),
-          password: optionalValue(config.get<string>('REDIS_PASSWORD')),
-          tls: config.get<string>('REDIS_TLS') === 'true' ? {} : undefined,
-          maxRetriesPerRequest: null,
-        },
-      }),
+      useFactory: (config: ConfigService) => {
+        const urlConfig = parseRedisUrl(config.get<string>('REDIS_URL'));
+        return {
+          connection: urlConfig ?? {
+            host: config.get<string>('REDIS_HOST') || '127.0.0.1',
+            port: Number(config.get<string>('REDIS_PORT') || 6379),
+            username: optionalValue(config.get<string>('REDIS_USERNAME')),
+            password: optionalValue(config.get<string>('REDIS_PASSWORD')),
+            tls: config.get<string>('REDIS_TLS') === 'true' ? {} : undefined,
+            maxRetriesPerRequest: null,
+          },
+        };
+      },
     }),
     BullModule.registerQueue(
       {
