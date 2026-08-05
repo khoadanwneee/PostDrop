@@ -76,6 +76,30 @@ export function LetterEditor({ initialDraft, onChange }: LetterEditorProps) {
     elements,
   });
 
+  const [paperColor, setPaperColor] = useState<string>(() => {
+    try {
+      const raw = localStorage.getItem('postdrop_draft');
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (typeof parsed.paper === 'string') return parsed.paper;
+      }
+    } catch {}
+    return 'ivory';
+  });
+
+  useEffect(() => {
+    const handlePaperChange = (e: Event) => {
+      const customEvent = e as CustomEvent<{ paper: string }>;
+      if (customEvent.detail?.paper) {
+        setPaperColor(customEvent.detail.paper);
+      }
+    };
+    window.addEventListener('postdrop-paper-change', handlePaperChange);
+    return () => {
+      window.removeEventListener('postdrop-paper-change', handlePaperChange);
+    };
+  }, []);
+
   useEffect(() => {
     onChange({
       paperOrientation: orientation,
@@ -335,6 +359,7 @@ export function LetterEditor({ initialDraft, onChange }: LetterEditorProps) {
               >
                 <LetterCanvas
                   theme={selectedTheme}
+                  paperColor={paperColor}
                   elements={elements}
                   selectedElement={editor.selectedElement}
                   selectedElementId={selectedId}

@@ -58,8 +58,20 @@ function useThemeArtwork(src?: string) {
 
   return loaded && loaded.src === src ? loaded.image : null;
 }
+const PAPER_COLORS: Record<string, string> = {
+  ivory: '#fffdf8',
+  rose: '#fff6f3',
+  warm: '#f7eddf',
+  sage: '#f3f6ed',
+  lavender: '#f7f2fa',
+  sky: '#f1f8fb',
+  parchment: '#f4e7cf',
+  linen: '#f8f3ea',
+};
+
 interface LetterCanvasProps {
   theme: LetterTheme;
+  paperColor?: string;
   elements: ThemeElement[];
   selectedElement: ThemeElement | null;
   selectedElementId: string | null;
@@ -79,13 +91,16 @@ interface LetterCanvasProps {
 
 function BackgroundTexture({
   theme,
+  paperColor,
   canvasSize,
 }: {
   theme: LetterTheme;
+  paperColor?: string;
   canvasSize: CanvasSize;
 }) {
   const safePixel = toPixelRect(theme.safeArea, canvasSize);
   const artwork = useThemeArtwork(theme.canvas.backgroundImage);
+  const paperBgColor = (paperColor && PAPER_COLORS[paperColor]) || theme.canvas.backgroundColor;
   const lines = useMemo(() => {
     const result: React.ReactNode[] = [];
     if (theme.canvas.texture === 'grid') {
@@ -169,7 +184,7 @@ function BackgroundTexture({
       <Rect
         width={canvasSize.width}
         height={canvasSize.height}
-        fill={theme.canvas.backgroundColor}
+        fill={paperBgColor}
       />
       {artwork ? (
         <KonvaImage
@@ -272,6 +287,7 @@ function BackgroundTexture({
 
 export function LetterCanvas({
   theme,
+  paperColor,
   elements,
   selectedElement,
   selectedElementId,
@@ -411,6 +427,8 @@ export function LetterCanvas({
     ? toPixelRect(selectedElement, canvasSize)
     : null;
 
+  const currentPaperBg = (paperColor && PAPER_COLORS[paperColor]) || theme.canvas.backgroundColor;
+
   return (
     <div
       className={`letter-canvas theme-${theme.canvas.variant}`}
@@ -418,7 +436,7 @@ export function LetterCanvas({
         width: canvasSize.width,
         height: canvasSize.height,
         '--canvas-accent': theme.canvas.accent,
-        '--canvas-paper': theme.canvas.backgroundColor,
+        '--canvas-paper': currentPaperBg,
         '--editor-scale': displayScale,
         '--theme-font-heading': theme.typography.headingFamily,
         '--theme-font-body': theme.typography.bodyFamily,
@@ -492,7 +510,7 @@ export function LetterCanvas({
         }}
       >
         <Layer listening={false}>
-          <BackgroundTexture theme={theme} canvasSize={canvasSize} />
+          <BackgroundTexture theme={theme} paperColor={paperColor} canvasSize={canvasSize} />
         </Layer>
         <Layer>
           {[...elements]

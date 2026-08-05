@@ -867,6 +867,16 @@ function bindBuilder(step) {
     if (control.id === 'deliveryDate') { document.querySelector('#date-message').textContent = dateMessage(); }
     persistDraft();
   }));
+  function applyPaperColor(paperValue) {
+    const pVal = paperValue || (draft && draft.paper) || 'ivory';
+    const paperClass = `paper-${pVal}`;
+    const targets = document.querySelectorAll('.letter-canvas-scale-layer, .letter-canvas-viewport, .letter-editor-stage, #letter-editor-root, .konvajs-content');
+    targets.forEach((el) => {
+      paperOptions.forEach(([val]) => el.classList.remove(`paper-${val}`));
+      el.classList.add(paperClass);
+    });
+  }
+
   document.querySelectorAll('[data-option]').forEach((control) => control.onclick = () => {
     const group = control.dataset.option;
     draft[group] = control.dataset.value;
@@ -877,10 +887,17 @@ function bindBuilder(step) {
         item.classList.toggle('selected', selected);
         item.setAttribute('aria-pressed', String(selected));
       });
+      if (group === 'paper') {
+        applyPaperColor(control.dataset.value);
+        window.dispatchEvent(new CustomEvent('postdrop-paper-change', { detail: { paper: control.dataset.value } }));
+      }
       return;
     }
     renderBuilder(step);
   });
+  if (step === 3) {
+    setTimeout(() => applyPaperColor(draft.paper || 'ivory'), 50);
+  }
   document.querySelector('[data-back]')?.addEventListener('click', () => {
     if (step === 4 && cameraStream) {
       cameraStream.getTracks().forEach((track) => track.stop());
