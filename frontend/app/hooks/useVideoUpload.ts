@@ -10,8 +10,7 @@ export interface UseVideoUploadReturn {
   uploadError: string | null;
   uploadVideoFile: (
     file: Blob | File,
-    userId?: string,
-    letterId?: string,
+    letterId: string,
     durationSeconds?: number,
   ) => Promise<UploadedVideo | null>;
   resetUpload: () => void;
@@ -30,16 +29,16 @@ export function useVideoUpload(
   const uploadVideoFile = useCallback(
     async (
       file: Blob | File,
-      userId = 'user_guest',
-      letterId = 'letter_draft',
+      letterId: string,
       durationSeconds?: number,
     ): Promise<UploadedVideo | null> => {
       if (!file) return null;
 
       // Validation 1: Size check
       if (file.size > config.maxSizeBytes) {
+        const maxMb = Math.round(config.maxSizeBytes / (1024 * 1024));
         setUploadError(
-          'Video vượt quá dung lượng cho phép (tối đa 100 MB). Vui lòng chọn tệp nhỏ hơn.',
+          `Video vượt quá dung lượng cho phép (tối đa ${maxMb} MB). Vui lòng chọn tệp nhỏ hơn.`,
         );
         return null;
       }
@@ -60,12 +59,7 @@ export function useVideoUpload(
           setUploadProgress((prev) => (prev < 90 ? prev + 20 : prev));
         }, 150);
 
-        const result = await uploadFutureVideo(
-          file,
-          userId,
-          letterId,
-          durationSeconds,
-        );
+        const result = await uploadFutureVideo(file, letterId, durationSeconds);
 
         clearInterval(progressTimer);
         setUploadProgress(100);

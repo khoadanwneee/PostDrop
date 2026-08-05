@@ -32,7 +32,7 @@ describe('RevealService', () => {
       data: [
         {
           session_id: '33333333-3333-4333-8333-333333333333',
-          session_expires_at: '2026-07-29T00:15:00.000Z',
+          session_expires_at: '2026-07-29T00:30:00.000Z',
           renderer_version: 1,
         },
       ],
@@ -95,16 +95,47 @@ describe('RevealService', () => {
         error: null,
       }),
     };
+    const attachmentId = '44444444-4444-4444-8444-444444444444';
     const sealedQuery = {
       select: jest.fn().mockReturnThis(),
       eq: jest.fn().mockReturnThis(),
-      order: jest.fn().mockResolvedValue({ data: [], error: null }),
+      order: jest.fn().mockResolvedValue({
+        data: [
+          {
+            id: attachmentId,
+            letter_attachment_id: attachmentId,
+            original_mime_type: 'video/webm',
+            original_byte_size: 4096,
+          },
+        ],
+        error: null,
+      }),
+    };
+    const placementQuery = {
+      select: jest.fn().mockReturnThis(),
+      in: jest.fn().mockResolvedValue({
+        data: [
+          {
+            id: attachmentId,
+            role: 'future_video',
+            x_percent: null,
+            y_percent: null,
+            scale: null,
+            rotation: null,
+            z_index: 0,
+            alt_text: null,
+          },
+        ],
+        error: null,
+      }),
     };
     const client = {
       rpc,
-      from: jest.fn((table: string) =>
-        table === 'letters' ? letterQuery : sealedQuery,
-      ),
+      from: jest.fn((table: string) => {
+        if (table === 'letters') return letterQuery;
+        if (table === 'sealed_letter_attachments') return sealedQuery;
+        return placementQuery;
+      }),
     };
     const supabase = {
       createServiceClient: () => client,
@@ -126,7 +157,21 @@ describe('RevealService', () => {
         title: 'Future letter',
         paper: 'Ivory',
         content: 'Private future letter',
-        attachments: [],
+        attachments: [
+          {
+            id: attachmentId,
+            role: 'future_video',
+            mimeType: 'video/webm',
+            byteSize: 4096,
+            x: undefined,
+            y: undefined,
+            scale: undefined,
+            rotation: undefined,
+            zIndex: 0,
+            altText: undefined,
+            contentPath: `/api/reveal/${letterId}/attachments/${attachmentId}`,
+          },
+        ],
       },
     });
     expect(rpc).toHaveBeenCalledWith('authorize_reveal_session', {

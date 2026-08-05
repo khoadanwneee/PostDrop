@@ -78,7 +78,7 @@ interface AttachmentRow {
   letter_id: string;
   asset_id: string;
   client_id: string | null;
-  role: 'decoration' | 'inline' | 'attachment';
+  role: 'decoration' | 'inline' | 'attachment' | 'future_video';
   x_percent: number | null;
   y_percent: number | null;
   scale: number | null;
@@ -319,7 +319,10 @@ export class AssetsService {
   ) {
     await this.assertDraft(supabase, letterId);
     this.validatePlacement(dto);
-    await this.findReadyAsset(supabase, dto.assetId);
+    const asset = await this.findReadyAsset(supabase, dto.assetId);
+    if (dto.role === 'future_video') {
+      await this.assertFutureVideoAllowed(supabase, letterId, asset);
+    }
 
     const { data, error } = await supabase
       .from('letter_attachments')
@@ -343,6 +346,16 @@ export class AssetsService {
       attachmentId,
     );
     this.validatePlacement({ ...this.toPlacement(current), ...dto });
+    const nextRole = dto.role ?? current.role;
+    if (nextRole === 'future_video') {
+      const asset = await this.findReadyAsset(supabase, current.asset_id);
+      await this.assertFutureVideoAllowed(
+        supabase,
+        letterId,
+        asset,
+        attachmentId,
+      );
+    }
 
     const { data, error } = await supabase
       .from('letter_attachments')
@@ -453,6 +466,35 @@ export class AssetsService {
     ) {
       throw new BadRequestException(
         'Decoration attachments require x, y, scale, and rotation',
+      );
+    }
+  }
+
+  private async assertFutureVideoAllowed(
+    supabase: SupabaseClient,
+    letterId: string,
+    asset: AssetRow,
+    excludeAttachmentId?: string,
+  ) {
+    if (asset.kind !== 'video') {
+      throw new BadRequestException(
+        'The future-video attachment must reference a video asset',
+      );
+    }
+
+    let request = supabase
+      .from('letter_attachments')
+      .select('id')
+      .eq('letter_id', letterId)
+      .eq('role', 'future_video');
+    if (excludeAttachmentId) {
+      request = request.neq('id', excludeAttachmentId);
+    }
+    const { data, error } = await request.maybeSingle();
+    this.throwOnError(error);
+    if (data) {
+      throw new ConflictException(
+        'This letter already has a future-video attachment',
       );
     }
   }

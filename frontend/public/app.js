@@ -567,6 +567,7 @@ function renderBuilder(step = 1) {
   const stepEyebrow = step === 4 ? 'BƯỚC 3.5 / 5 — QUAY VIDEO CHO TƯƠNG LAI' : `BƯỚC ${step > 4 ? step - 1 : step} / 5 — ${steps[step - 1].toUpperCase()}`;
   app.innerHTML = `<div class="app-page">${appHeader()}<main id="main-content" class="container builder-wrap"><div class="builder-head"><div><span class="eyebrow">${stepEyebrow}</span><h1>${stepTitle(step)}</h1><p>${stepDescription(step)}</p></div><span class="save-state">Đã lưu bản nháp</span></div>${stepper(step)}<div id="builder-content">${renderStep(step)}</div></main></div>`;
   bindBuilder(step);
+  if (step === 4) ensureVideoStepLetterId();
 }
 
 function stepTitle(step) { return ['Bạn muốn gửi lá thư theo cách nào?','Bạn muốn viết thư với loại giấy nào?','Viết điều bạn muốn gặp lại','Gửi một lời nhắn cho chính mình trong tương lai','Lá thư sẽ tìm đến ai?','Kiểm tra trước khi niêm phong'][step - 1]; }
@@ -609,9 +610,63 @@ function renderDesignStep() {
 }
 
 function renderVideoStep() {
-  return `<div id="future-video-root" data-draft-id="${escapeHtml(draft.draftId)}" aria-live="polite">
+  const pendingLetterId = localStorage.getItem('postdrop-pending-letter-id') || '';
+  return `<div id="future-video-root" data-draft-id="${escapeHtml(draft.draftId)}" data-letter-id="${escapeHtml(pendingLetterId)}" aria-live="polite">
     <div class="skeleton" aria-label="Loading video recorder"></div>
   </div>`;
+}
+
+// Creates (or reuses) a real backend letter so the future-video step has a
+// genuine letterId to upload against, instead of waiting until the final
+// wizard step. Letters created here are still plain drafts — LettersService
+// only enforces completeness at seal() time, so a partially-filled draft is
+// a valid row. Reuses the same localStorage key submitLetter() already uses
+// so the two code paths PATCH the same row rather than creating duplicates.
+async function ensureDraftLetter() {
+  const existingId = localStorage.getItem('postdrop-pending-letter-id');
+  if (existingId) return existingId;
+
+  await ensureAuthToken(draft.recipientEmail, draft.recipientName);
+  const payload = {
+    title: draft.title || undefined,
+    content: draft.content || undefined,
+    recipientName: draft.recipientName || undefined,
+    recipientEmail: draft.recipientEmail || undefined,
+    letterType: draft.letterType === 'handwritten' ? 'handwritten' : 'online',
+    paper: labelize(draft.paper),
+    font: draft.font,
+    envelope: labelize(draft.envelope),
+  };
+  const response = await apiFetch('/api/letters', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+  if (!response.ok) {
+    const errJson = await response.json().catch(() => ({}));
+    throw new Error(errJson.message || 'Không thể chuẩn bị bản nháp lá thư');
+  }
+  const created = await response.json();
+  localStorage.setItem('postdrop-pending-letter-id', created.id);
+  return created.id;
+}
+
+// Runs once the video step is on screen: resolves a real letterId and hands
+// it to the mounted React FutureVideoStep via a DOM attribute + event,
+// without forcing a full re-render of the wizard.
+function ensureVideoStepLetterId() {
+  ensureDraftLetter()
+    .then((letterId) => {
+      document
+        .querySelector('#future-video-root')
+        ?.setAttribute('data-letter-id', letterId);
+      window.dispatchEvent(
+        new CustomEvent('postdrop-letter-id-ready', { detail: { letterId } }),
+      );
+    })
+    .catch((error) => {
+      console.warn('ensureDraftLetter failed', error);
+      toast('Chưa thể chuẩn bị bước quay video. Vui lòng thử lại.', 'error');
+    });
 }
 
 function renderStep(step) {
@@ -1259,7 +1314,10 @@ async function nextStep(step) {
     if (draft.recipientName.trim().length < 2) { setError('recipientName','Vui lòng nhập họ tên người nhận.'); valid = false; }
     if (!/^\S+@\S+\.\S+$/.test(draft.recipientEmail)) { setError('recipientEmail','Email chưa đúng định dạng.'); valid = false; }
     if (draft.deliveryMethod !== 'email' && draft.address.trim().length < 8) { setError('address','Vui lòng nhập địa chỉ đầy đủ để giao thư.'); valid = false; }
-    if (new Date(draft.deliveryDate) <= new Date()) { setError('deliveryDate','Ngày giao cần nằm trong tương lai.'); valid = false; }
+    // DEMO: future-date requirement dropped so sealing (and the immediate
+    // reveal email — see the digital-release RPC) doesn't depend on the
+    // chosen date. Restore the future-date check before shipping.
+    if (!draft.deliveryDate) { setError('deliveryDate','Vui lòng chọn ngày giao.'); valid = false; }
     if (!valid) { toast('Vẫn còn thông tin cần hoàn thiện.', 'error'); return; }
   }
   if (step === 6) {

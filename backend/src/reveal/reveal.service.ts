@@ -46,7 +46,7 @@ interface SealedAttachmentRow {
 
 interface AttachmentPlacementRow {
   id: string;
-  role: 'decoration' | 'inline' | 'attachment';
+  role: 'decoration' | 'inline' | 'attachment' | 'future_video';
   x_percent: number | null;
   y_percent: number | null;
   scale: number | null;

@@ -10,6 +10,10 @@ coverage/
 supabase/.branches/
 supabase/.temp/
 
+# Regenerated from node_modules/@ffmpeg/core by scripts/copy-ffmpeg-core.js
+# (postinstall) — large binary, not meant to be committed.
+frontend/public/ffmpeg/
+
 *.tsbuildinfo
 *.log
 .DS_Store
