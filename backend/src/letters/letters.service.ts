@@ -119,7 +119,47 @@ export class LettersService {
   async update(supabase: SupabaseClient, id: string, dto: UpdateLetterDto) {
     const current = await this.findRow(supabase, id);
     if (current.content_status !== 'draft') {
-      throw new ConflictException('A sealed letter cannot be edited');
+      const contentFields = [
+        'title',
+        'content',
+        'paper',
+        'font',
+        'envelope',
+        'expectedArrivalAt',
+        'deliveryMethod',
+        'physicalFulfillmentMode',
+        'letterType',
+      ];
+      const hasContentChanges = contentFields.some(
+        (field) => (dto as Record<string, unknown>)[field] !== undefined,
+      );
+      if (hasContentChanges) {
+        throw new ConflictException('A sealed letter content cannot be edited');
+      }
+
+      const updateData: Partial<LetterRow> = {};
+      if (dto.address !== undefined) updateData.address = dto.address;
+      if (dto.recipientName !== undefined)
+        updateData.recipient_name = dto.recipientName;
+      if (dto.recipientEmail !== undefined)
+        updateData.recipient_email = dto.recipientEmail;
+      if (dto.recipientPhone !== undefined)
+        updateData.recipient_phone = dto.recipientPhone;
+      if (dto.note !== undefined) updateData.note = dto.note;
+
+      const { data, error } = await supabase
+        .from('letters')
+        .update(updateData)
+        .eq('id', id)
+        .select(PUBLIC_LETTER_COLUMNS)
+        .maybeSingle();
+
+      this.throwOnError(error);
+      if (!data) {
+        throw new ConflictException('The letter could not be updated');
+      }
+
+      return this.toResponse(data as unknown as LetterRow);
     }
 
     const { data, error } = await supabase

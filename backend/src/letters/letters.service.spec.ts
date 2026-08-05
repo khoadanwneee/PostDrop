@@ -65,4 +65,50 @@ describe('LettersService sealing validation', () => {
       }),
     ).toThrow(BadRequestException);
   });
+
+  describe('update method on sealed letters', () => {
+    it('allows updating address and delivery contact on sealed letters', async () => {
+      const mockSupabase = {
+        from: jest.fn().mockReturnThis(),
+        select: jest.fn().mockReturnThis(),
+        eq: jest.fn().mockReturnThis(),
+        maybeSingle: jest.fn().mockResolvedValue({
+          data: {
+            id: 'letter-1',
+            title: 'Sealed letter',
+            content_status: 'sealed',
+            address: 'New Address 456',
+            recipient_name: 'Recipient',
+            recipient_email: 'rec@example.com',
+          },
+          error: null,
+        }),
+        update: jest.fn().mockReturnThis(),
+      };
+
+      jest.spyOn(service as any, 'findRow').mockResolvedValue({
+        id: 'letter-1',
+        content_status: 'sealed',
+        address: 'Old Address 123',
+      });
+
+      const updated = await service.update(mockSupabase as any, 'letter-1', {
+        address: 'New Address 456',
+      });
+
+      expect(updated.address).toBe('New Address 456');
+    });
+
+    it('rejects updating content fields on sealed letters', async () => {
+      const mockSupabase = {} as any;
+      jest.spyOn(service as any, 'findRow').mockResolvedValue({
+        id: 'letter-1',
+        content_status: 'sealed',
+      });
+
+      await expect(
+        service.update(mockSupabase, 'letter-1', { title: 'New Title' }),
+      ).rejects.toThrow('A sealed letter content cannot be edited');
+    });
+  });
 });

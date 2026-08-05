@@ -406,11 +406,11 @@ create policy letters_insert_own
   to authenticated
   with check (owner_id = auth.uid() and content_status = 'draft');
 
-create policy letters_update_own_draft
+create policy letters_update_own
   on public.letters for update
   to authenticated
-  using (owner_id = auth.uid() and content_status = 'draft')
-  with check (owner_id = auth.uid() and content_status = 'draft');
+  using (owner_id = auth.uid())
+  with check (owner_id = auth.uid());
 
 create policy letters_delete_own_draft
   on public.letters for delete
