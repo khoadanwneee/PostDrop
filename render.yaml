@@ -16,7 +16,7 @@ services:
         fromService:
           type: web
           name: postdrop-backend-api
-          property: url
+          property: host
 
   # 2. Backend API + Integrated Worker (NestJS Web Service - Free)
   - type: web
