@@ -7,6 +7,7 @@ import { Session, User } from '@supabase/supabase-js';
 import { SupabaseService } from '../supabase/supabase.service';
 import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
+import { ResendConfirmationDto } from './dto/resend-confirmation.dto';
 
 export interface AuthResult {
   user: User | null;
@@ -64,6 +65,20 @@ export class AuthService {
     }
 
     return this.toAuthResult(data.user, data.session);
+  }
+
+  async resendConfirmation(dto: ResendConfirmationDto) {
+    const supabase = this.supabaseService.createPublicClient();
+    const { error } = await supabase.auth.resend({
+      type: 'signup',
+      email: dto.email,
+    });
+
+    if (error) {
+      throw new BadRequestException(error.message);
+    }
+
+    return { success: true };
   }
 
   async refresh(refreshToken: string) {

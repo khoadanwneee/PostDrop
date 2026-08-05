@@ -35,6 +35,14 @@ export class PaymentsController {
     return this.paymentsService.findOne(auth.user.id, id);
   }
 
+  @Get('letter/:letterId')
+  findByLetter(
+    @CurrentAuth() auth: CurrentAuthValue,
+    @Param('letterId') letterId: string,
+  ) {
+    return this.paymentsService.findByLetter(auth.user.id, letterId);
+  }
+
   @Post(':id/mock/complete')
   complete(@CurrentAuth() auth: CurrentAuthValue, @Param('id') id: string) {
     return this.paymentsService.simulate(

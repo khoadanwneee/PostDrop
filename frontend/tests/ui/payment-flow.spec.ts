@@ -20,6 +20,14 @@ describe('paid sealing flow', () => {
     expect(appScript).not.toMatch(/apiFetch\(`\/api\/letters\/\$\{created\.id\}\/seal`/);
   });
 
+  it('renders current and invoiced prices from backend responses', () => {
+    expect(appScript).toContain("fetch('/api/pricing')");
+    expect(appScript).toContain('void loadPricingCatalog()');
+    expect(appScript).toContain('`/api/payments/letter/${letter.id}`');
+    expect(appScript).toContain('formatMoney(payment.amount, payment.currency)');
+    expect(appScript).not.toMatch(/(?:29|45|49)\.000đ/);
+  });
+
   it('provides hosted checkout and payment-result pages', () => {
     expect(checkoutPage).toContain('/api/mock-payments/');
     expect(checkoutPage).toContain("submit('complete')");

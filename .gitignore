@@ -13,3 +13,5 @@ supabase/.temp/
 *.tsbuildinfo
 *.log
 .DS_Store
+
+tmp/

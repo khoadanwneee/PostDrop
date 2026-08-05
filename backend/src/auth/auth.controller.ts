@@ -16,6 +16,7 @@ import { AuthResult, AuthService } from './auth.service';
 import { CurrentAuth } from './current-auth.decorator';
 import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
+import { ResendConfirmationDto } from './dto/resend-confirmation.dto';
 
 const REFRESH_TOKEN_COOKIE = 'postdrop_refresh_token';
 const REFRESH_TOKEN_MAX_AGE_MS = 30 * 24 * 60 * 60 * 1000;
@@ -46,6 +47,11 @@ export class AuthController {
   ) {
     const result = await this.authService.login(dto);
     return this.sendSession(response, result);
+  }
+
+  @Post('resend-confirmation')
+  resendConfirmation(@Body() dto: ResendConfirmationDto) {
+    return this.authService.resendConfirmation(dto);
   }
 
   @Post('refresh')

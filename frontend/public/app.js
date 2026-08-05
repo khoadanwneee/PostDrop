@@ -190,11 +190,40 @@ const icon = () => '';
 const escapeHtml = (value = '') => String(value).replace(/[&<>'"]/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' })[char]);
 const formatDate = (value) => new Intl.DateTimeFormat('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' }).format(new Date(`${value}T00:00:00`));
 const futureDate = () => { const date = new Date(); date.setFullYear(date.getFullYear() + 1); return date.toISOString().slice(0, 10); };
+const formatMoney = (amount, currency = 'VND') => new Intl.NumberFormat('vi-VN', { style: 'currency', currency }).format(amount);
+
+let pricingCatalog = null;
+
+function pricingProduct(deliveryMethod = draft.deliveryMethod) {
+  return deliveryMethod === 'physical' ? 'physical' : 'digital';
+}
+
+function pricingText(product, prefix = '') {
+  const quote = pricingCatalog?.[product];
+  return quote ? `${prefix}${formatMoney(quote.amount, pricingCatalog.currency)}` : 'Đang tải giá…';
+}
+
+function pricingMarkup(product, prefix = '') {
+  return `<span data-pricing-product="${product}" data-pricing-prefix="${escapeHtml(prefix)}">${pricingText(product, prefix)}</span>`;
+}
+
+async function loadPricingCatalog() {
+  try {
+    const response = await fetch('/api/pricing');
+    if (!response.ok) throw new Error('Pricing unavailable');
+    pricingCatalog = await response.json();
+    document.querySelectorAll('[data-pricing-product]').forEach((element) => {
+      element.textContent = pricingText(element.dataset.pricingProduct, element.dataset.pricingPrefix || '');
+    });
+  } catch (error) {
+    console.warn('Could not load pricing catalog:', error);
+  }
+}
 
 const defaultDraft = {
   letterType: 'online', title: '', content: '', paper: 'ivory', font: 'serif',
   envelope: 'burgundy', recipientMode: 'self', recipientName: '', recipientEmail: '',
-  recipientPhone: '', address: '', deliveryDate: futureDate(), deliveryMethod: 'hybrid', note: '',
+  recipientPhone: '', address: '', deliveryDate: futureDate(), deliveryMethod: 'email', note: '',
   theme: 'none', decorations: [], paperOrientation: null, selectedThemeId: null,
   userElements: [], lastStep: 1, draftId: '',
 };
@@ -282,6 +311,7 @@ let draft = {
   userElements: Array.isArray(storedDraft.userElements) ? storedDraft.userElements : [],
   draftId: typeof storedDraft.draftId === 'string' && storedDraft.draftId ? storedDraft.draftId : createDraftId(),
 };
+if (draft.deliveryMethod === 'hybrid') draft.deliveryMethod = 'email';
 
 const legacyDraftHasContent = Boolean(
   String(storedDraft.title || '').trim() ||
@@ -435,13 +465,15 @@ window.addEventListener('postdrop-editor-toast', (event) => {
 
 function openModal({ title, message, confirm = 'Xác nhận', onConfirm }) {
   modalRoot.innerHTML = `<div class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="modal-title"><div class="modal"><h2 id="modal-title">${escapeHtml(title)}</h2><p>${escapeHtml(message)}</p><div class="modal-actions"><button class="button button-ghost" data-modal-close>Quay lại</button><button class="button button-primary" data-modal-confirm>${escapeHtml(confirm)}</button></div></div></div>`;
-  modalRoot.querySelector('[data-modal-close]').onclick = () => { modalRoot.innerHTML = ''; };
+  const closeButton = modalRoot.querySelector('[data-modal-close]');
+  if (closeButton) closeButton.onclick = () => { modalRoot.innerHTML = ''; };
   modalRoot.querySelector('[data-modal-confirm]').onclick = () => { modalRoot.innerHTML = ''; onConfirm?.(); };
 }
 
-function openFormModal({ title, bodyHtml, confirmText = 'Lưu thay đổi', onConfirm }) {
-  modalRoot.innerHTML = `<div class="modal-backdrop" role="dialog" aria-modal="true"><div class="modal" style="max-width:480px;width:90%"><h2 id="modal-title">${escapeHtml(title)}</h2><div style="margin:16px 0">${bodyHtml}</div><div class="modal-actions"><button type="button" class="button button-ghost" data-modal-close>Quay lại</button><button type="button" class="button button-primary" data-modal-confirm>${escapeHtml(confirmText)}</button></div></div></div>`;
-  modalRoot.querySelector('[data-modal-close]').onclick = () => { modalRoot.innerHTML = ''; };
+function openFormModal({ title, bodyHtml, confirmText = 'Lưu thay đổi', cancelText = 'Quay lại', modalClass = '', onConfirm }) {
+  modalRoot.innerHTML = `<div class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="modal-title"><div class="modal ${escapeHtml(modalClass)}"><h2 id="modal-title">${escapeHtml(title)}</h2><div class="modal-body">${bodyHtml}</div><div class="modal-actions">${cancelText ? `<button type="button" class="button button-ghost" data-modal-close>${escapeHtml(cancelText)}</button>` : ''}<button type="button" class="button button-primary" data-modal-confirm>${escapeHtml(confirmText)}</button></div></div></div>`;
+  const closeButton = modalRoot.querySelector('[data-modal-close]');
+  if (closeButton) closeButton.onclick = () => { modalRoot.innerHTML = ''; };
   modalRoot.querySelector('[data-modal-confirm]').onclick = async () => {
     const res = await onConfirm?.(modalRoot.querySelector('.modal'));
     if (res !== false) modalRoot.innerHTML = '';
@@ -496,7 +528,10 @@ function brand() { return `<a class="brand" href="#/" aria-label="PostDrop — T
 function button(label, route, kind = 'primary', iconName = '') { return `<a class="button button-${kind}" href="#${route}">${label}${iconName ? icon(iconName) : ''}</a>`; }
 
 function siteHeader() {
-  return `<header class="site-header"><div class="container nav">${brand()}<nav class="nav-links" aria-label="Điều hướng chính"><a href="#/" data-scroll="how">Cách hoạt động</a><a href="#/" data-scroll="services">Mẫu thư</a><a href="#/" data-scroll="pricing">Bảng giá</a><a href="#/" data-scroll="trust">Dành cho tổ chức</a></nav><div class="nav-actions"><a class="text-button" href="#/login">Đăng nhập</a>${button('Viết thư ngay', '/create/1?new=1')}<button class="menu-toggle" aria-label="Mở menu">${icon('menu')}</button></div></div></header>`;
+  const accountLink = isLoggedIn()
+    ? '<a class="text-button" href="#/dashboard">Tài khoản</a>'
+    : '<a class="text-button" href="#/login">Đăng nhập</a>';
+  return `<header class="site-header"><div class="container nav">${brand()}<nav class="nav-links" aria-label="Điều hướng chính"><a href="#/" data-scroll="how">Cách hoạt động</a><a href="#/" data-scroll="services">Mẫu thư</a><a href="#/" data-scroll="pricing">Bảng giá</a><a href="#/" data-scroll="trust">Dành cho tổ chức</a></nav><div class="nav-actions">${accountLink}${button('Viết thư ngay', '/create/1?new=1')}<button class="menu-toggle" aria-label="Mở menu">${icon('menu')}</button></div></div></header>`;
 }
 
 function appHeader() {
@@ -522,10 +557,10 @@ function renderLanding() {
   app.innerHTML = `<div class="page-shell">${siteHeader()}<main id="main-content">
     <section class="hero hero-invitation"><div class="invitation-frame" aria-hidden="true"><span class="frame-corner frame-corner-tl"></span><span class="frame-corner frame-corner-tr"></span><span class="frame-corner frame-corner-bl"></span><span class="frame-corner frame-corner-br"></span></div>${heroFlorals()}${landingPlane()}<div class="hero-content"><div class="invitation-monogram" aria-hidden="true"><span>P</span></div><span class="eyebrow">POSTDROP · THƯ GỬI ĐẾN TƯƠNG LAI</span><h1 class="hero-handwritten mea-culpa-regular"><span>Một lá thư từ chính bạn của những năm trước.</span></h1><div class="hero-floral-divider" aria-hidden="true"><span></span><i></i><span></span></div><p>Viết hôm nay, PostDrop sẽ lưu giữ và gửi lá thư đến đúng ngày bạn lựa chọn.</p><div class="hero-actions">${button('Viết thư cho tương lai', '/create/1?new=1', 'primary', 'arrowRight')}${hasMeaningfulDraft() ? button('Tiếp tục bản nháp', '/create/resume', 'secondary', 'arrowRight') : ''}</div></div></section>
     <section class="letter-section" id="how"><div class="container"><div class="section-head"><span class="chapter">CHƯƠNG 01</span><h2>Cách PostDrop hoạt động</h2><p>Một nghi thức nhỏ hôm nay, một cuộc gặp gỡ đặc biệt trong tương lai.</p></div><div class="journey"><div class="journey-planes" aria-hidden="true">${[25,50,75].map((pos) => `<span class="journey-plane" style="left:${pos}%">${paperPlane('journey-plane-icon')}</span>`).join('')}</div>${journeyStep('pen','Viết thư','Dành vài phút để viết điều bạn muốn nhớ.')}${journeyStep('seal','Niêm phong','Xác nhận nội dung và chọn ngày gặp lại.')}${journeyStep('archive','Lưu giữ','Chúng tôi bảo quản an toàn suốt hành trình.')}${journeyStep('truck','Giao đúng hẹn','Lá thư đến tay vào đúng ngày đã chọn.')}</div></div></section>
-    <section class="letter-section" id="services"><div class="container"><div class="section-head"><span class="chapter">CHƯƠNG 02</span><h2>Viết thư trực tuyến</h2><p>Soạn lá thư trong không gian riêng tư, tùy chọn giấy, phong bì và lời nhắn video cho tương lai.</p></div><div class="service-grid" style="grid-template-columns:1fr;max-width:540px;margin:0 auto"><a href="#/create/1?new=1" class="service-card"><div class="service-art"><div class="paper-stack"></div></div><span class="eyebrow">TRỰC TUYẾN</span><h3>Viết thư trực tuyến</h3><p>Soạn thư trong không gian yên tĩnh, chọn giấy và phong bì, chúng tôi sẽ làm phần còn lại.</p><div class="service-meta"><span>5–10 phút</span><span>Từ 29.000đ</span></div></a></div></div></section>
+    <section class="letter-section" id="services"><div class="container"><div class="section-head"><span class="chapter">CHƯƠNG 02</span><h2>Viết thư trực tuyến</h2><p>Soạn lá thư trong không gian riêng tư, tùy chọn giấy, phong bì và lời nhắn video cho tương lai.</p></div><div class="service-grid" style="grid-template-columns:1fr;max-width:540px;margin:0 auto"><a href="#/create/1?new=1" class="service-card"><div class="service-art"><div class="paper-stack"></div></div><span class="eyebrow">TRỰC TUYẾN</span><h3>Viết thư trực tuyến</h3><p>Soạn thư trong không gian yên tĩnh, chọn giấy và phong bì, chúng tôi sẽ làm phần còn lại.</p><div class="service-meta"><span>5–10 phút</span>${pricingMarkup('digital', 'Từ ')}</div></a></div></div></section>
     <section class="letter-section"><div class="container"><div class="section-head"><span class="chapter">NHỮNG DỊP ĐỂ NHỚ</span><h2>Đánh dấu điều quan trọng</h2></div><div class="occasion-row"><span class="occasion">Sinh nhật</span><span class="occasion">Tốt nghiệp</span><span class="occasion">Kỷ niệm</span><span class="occasion">Năm mới</span><span class="occasion">Cột mốc sự nghiệp</span></div></div></section>
     <section class="letter-section" id="trust"><div class="container"><div class="section-head"><span class="chapter">CHƯƠNG 03</span><h2>Một lời hứa được gìn giữ</h2><p>Niềm tin của bạn được bảo vệ bằng những lớp an toàn rõ ràng, từ hôm nay đến ngày giao.</p></div><div class="trust-grid">${trustItem('database','Số hóa dự phòng','Bản sao được mã hóa và lưu tách biệt để phòng sự cố.')}${trustItem('shield','Bảo quản an toàn','Thư vật lý được lưu tại môi trường kiểm soát độ ẩm.')}${trustItem('map','Xác minh địa chỉ','Chúng tôi nhắc bạn xác nhận địa chỉ trước ngày giao 30 ngày.')}${trustItem('truck','Theo dõi hành trình','Mọi cột mốc quan trọng đều được cập nhật rõ ràng.')}</div></div></section>
-    <section class="letter-section" id="pricing"><div class="container"><div class="section-head"><span class="chapter">CHƯƠNG 04</span><h2>Một mức giá cho mỗi cách gửi</h2><p>Thanh toán một lần. Không có phí ẩn trong suốt thời gian lưu giữ.</p></div><div class="pricing-grid">${priceCard('Email','29.000đ',['Gửi qua email đúng hẹn','Lưu giữ đến 5 năm','Miễn phí giao qua email'])}${priceCard('Physical','49.000đ',['In trên giấy cao cấp','Phong bì và niêm phong','+ 35.000đ phí giao hàng'],true)}</div></div></section>
+    <section class="letter-section" id="pricing"><div class="container"><div class="section-head"><span class="chapter">CHƯƠNG 04</span><h2>Một mức giá cho mỗi cách gửi</h2><p>Thanh toán một lần. Không có phí ẩn trong suốt thời gian lưu giữ.</p></div><div class="pricing-grid">${priceCard('Email','digital',['Gửi qua email đúng hẹn','Lưu giữ đến 5 năm','Miễn phí giao qua email'])}${priceCard('Physical','physical',['In trên giấy cao cấp','Phong bì và niêm phong','Đã gồm phí giao hàng'],true)}</div></div></section>
     <section class="letter-section"><div class="container"><div class="quote-card"><blockquote class="mea-culpa-regular">“Tôi đã quên mình từng lo lắng nhiều đến thế. Lá thư ấy giống như một cái ôm đến muộn, nhưng đúng lúc.”</blockquote><cite>Hà My · Nhận thư sau 3 năm</cite></div></div></section>
     <section class="letter-section"><div class="container"><div class="section-head"><span class="chapter">NHỮNG ĐIỀU BẠN CÓ THỂ HỎI</span><h2>Câu hỏi thường gặp</h2></div><div class="faq-list">${faq('Nội dung lá thư có được bảo mật không?','Có. Nội dung được mã hóa khi lưu trữ. Sau khi niêm phong, ngay cả bạn cũng không thể mở lại trước ngày đã chọn.')}${faq('Tôi có thể đổi địa chỉ nhận thư không?','Có. PostDrop sẽ chủ động nhắc bạn xác nhận hoặc cập nhật địa chỉ trước ngày giao 30 ngày.')}${faq('Nếu tôi đổi email hoặc số điện thoại thì sao?','Bạn có thể cập nhật thông tin liên hệ bất kỳ lúc nào trong trang chi tiết lá thư.')}${faq('Tôi có thể hủy sau khi niêm phong không?','Bạn có thể liên hệ hỗ trợ để hủy lịch giao. Nội dung đã niêm phong vẫn không thể chỉnh sửa.')}</div></div></section>
     <section class="final-cta"><span class="eyebrow">PHẦN KẾT</span><h2>Bạn muốn gửi điều gì cho mình trong tương lai?</h2><p>Có những điều chỉ thời gian mới giúp chúng ta hiểu được.</p>${button('Viết lá thư của tôi', '/create/1?new=1', 'primary', 'arrowRight')}<div class="final-seal" aria-hidden="true">P</div></section>
@@ -533,7 +568,7 @@ function renderLanding() {
   bindLanding();
 }
 
-function priceCard(name, price, features, featured = false) { return `<article class="price-card ${featured ? 'featured' : ''}">${featured ? '<span class="mini-stamp">ĐƯỢC YÊU THÍCH</span>' : ''}<span class="eyebrow">GÓI ${name.toUpperCase()}</span><div class="price">${price} <small>/ lá thư</small></div><ul class="feature-list">${features.map((item) => `<li>${item}</li>`).join('')}</ul>${button(`Chọn gói ${name}`, '/create/1?new=1', featured ? 'primary' : 'secondary')}</article>`; }
+function priceCard(name, product, features, featured = false) { return `<article class="price-card ${featured ? 'featured' : ''}">${featured ? '<span class="mini-stamp">ĐƯỢC YÊU THÍCH</span>' : ''}<span class="eyebrow">GÓI ${name.toUpperCase()}</span><div class="price">${pricingMarkup(product)} <small>/ lá thư</small></div><ul class="feature-list">${features.map((item) => `<li>${item}</li>`).join('')}</ul>${button(`Chọn gói ${name}`, '/create/1?new=1', featured ? 'primary' : 'secondary')}</article>`; }
 function faq(question, answer) { return `<div class="faq-item"><button class="faq-question" aria-expanded="false">${question}<span>+</span></button><p class="faq-answer">${answer}</p></div>`; }
 function footer() { return `<footer class="footer"><div class="container"><div class="footer-grid"><div>${brand()}<p style="margin-top:16px;max-width:270px">Gửi một phần của hôm nay đến đúng người, vào đúng ngày trong tương lai.</p></div><div><h4>SẢN PHẨM</h4><div class="footer-links"><a href="#/" data-scroll="how">Cách hoạt động</a><a href="#/" data-scroll="services">Loại thư</a><a href="#/" data-scroll="pricing">Bảng giá</a></div></div><div><h4>HỖ TRỢ</h4><div class="footer-links"><a href="#/">Câu hỏi thường gặp</a><a href="#/">Liên hệ</a><a href="#/">Theo dõi thư</a></div></div><div><h4>PHÁP LÝ</h4><div class="footer-links"><a href="#/">Quyền riêng tư</a><a href="#/">Điều khoản</a><a href="#/">Bảo mật</a></div></div></div><div class="copyright">© 2026 PostDrop. Mọi quyền được bảo lưu.<span>Được tạo ra để những điều quan trọng không bị lãng quên.</span></div></div></footer>`; }
 
@@ -618,9 +653,10 @@ function renderStep(step) {
   if (step === 2) return renderPaperOrientationStep();
   if (step === 3) return renderDesignStep();
   if (step === 4) return renderVideoStep();
-  if (step === 1) return `<div class="panel"><div class="choice-grid" style="grid-template-columns:1fr;max-width:480px;margin:0 auto">${typeCard('online','pen','Viết thư trực tuyến','Soạn thư ngay trên PostDrop, chọn thiết kế và chúng tôi sẽ in hoặc gửi email.','5–10 phút','Từ 29.000đ')}</div>${builderActions(step)}</div>`;
-  if (step === 5) return `<div class="workspace"><section class="panel"><h2>Thông tin người nhận</h2><div class="field"><label>Gửi lá thư này cho</label><div class="segmented">${segment('recipientMode','self','Chính tôi')}${segment('recipientMode','other','Người khác')}</div></div><div class="field-row">${field('recipientName','Họ tên người nhận',draft.recipientName,'Nguyễn Minh Anh')}${field('recipientEmail','Email',draft.recipientEmail,'minhanh@example.com','email')}</div><div class="field-row">${field('recipientPhone','Số điện thoại',draft.recipientPhone,'0901 234 567','tel')}${field('deliveryDate','Ngày dự kiến giao',draft.deliveryDate,'','date')}</div><div id="date-message" class="date-message">${dateMessage()}</div><div class="field"><label>Hình thức nhận</label><div class="segmented">${segment('deliveryMethod','email','Email')}${segment('deliveryMethod','physical','Thư vật lý')}${segment('deliveryMethod','hybrid','Cả hai')}</div></div><div class="field" id="address-field"><label for="address">Địa chỉ nhận</label><input id="address" data-draft="address" value="${escapeHtml(draft.address)}" placeholder="Số nhà, tên đường, quận/huyện, tỉnh/thành"/><div class="field-error" data-error="address"></div></div><div class="field"><label for="note">Ghi chú giao hàng <span style="font-weight:400;color:var(--muted)">(không bắt buộc)</span></label><textarea id="note" data-draft="note" style="min-height:95px" placeholder="Ví dụ: Gọi trước khi giao">${escapeHtml(draft.note)}</textarea></div></section><aside class="panel"><h2>Ngày gặp lại</h2><p class="panel-intro">Ngày bạn chọn sẽ trở thành một cột mốc. PostDrop sẽ đồng hành để lá thư không bị lạc đường.</p><div class="mini-envelope" style="width:100%;height:185px;aspect-ratio:auto"><span>${draft.deliveryDate ? formatDate(draft.deliveryDate) : 'Chưa chọn ngày'}</span></div><div class="info-note" style="margin-top:24px">${icon('info')}<span>PostDrop sẽ gửi yêu cầu xác nhận địa chỉ trước ngày giao 30 ngày.</span></div></aside></div>${builderActions(step)}`;
-  return `<div class="workspace"><section class="panel"><h2>Tóm tắt lá thư</h2><div class="envelope-preview" style="height:190px"><div class="mini-envelope" style="background:${envelopeColor()}"><span>${escapeHtml(draft.title || 'Lá thư của tôi')}</span></div></div><div class="summary-list">${summaryRow('Tiêu đề',draft.title || 'Chưa đặt tên')}${summaryRow('Người nhận',draft.recipientName || 'Chưa điền')}${summaryRow('Ngày gửi',draft.deliveryDate ? formatDate(draft.deliveryDate) : 'Chưa chọn')}${summaryRow('Video nhắn gửi',draft.videoDataUrl ? 'Đã đính kèm video' : 'Không có')}${summaryRow('Hình thức',deliveryLabel())}${summaryRow('Mẫu phong bì',labelize(draft.envelope))}</div><div class="sealed-message">${icon('seal')} <strong>Nội dung sắp được niêm phong.</strong><br/>Bạn sẽ gặp lại những dòng chữ này vào đúng ngày đã chọn.</div></section><aside class="panel"><h2>Chi tiết thanh toán</h2><p class="panel-intro">Thanh toán một lần cho toàn bộ hành trình.</p><div class="summary-list">${summaryRow('Gói dịch vụ',draft.deliveryMethod === 'email' ? '29.000đ' : '49.000đ')}${summaryRow('Phí giao hàng (ship)',draft.deliveryMethod === 'email' ? '0đ' : '35.000đ')}<div class="summary-row total-row"><span>Tổng thanh toán</span><strong>${totalPrice()}</strong></div></div><label class="seal-check"><input id="seal-confirm" type="checkbox"/><span>Tôi hiểu rằng sau khi niêm phong, nội dung lá thư sẽ không thể chỉnh sửa.</span></label><div class="field-error" data-error="seal"></div>${builderActions(step, true)}</aside></div>`;
+  if (step === 1) return `<div class="panel"><div class="choice-grid" style="grid-template-columns:1fr;max-width:480px;margin:0 auto">${typeCard('online','pen','Viết thư trực tuyến','Soạn thư ngay trên PostDrop, chọn thiết kế và chúng tôi sẽ in hoặc gửi email.','5–10 phút',pricingMarkup('digital', 'Từ '))}</div>${builderActions(step)}</div>`;
+  if (step === 5) return `<div class="workspace"><section class="panel"><h2>Thông tin người nhận</h2><div class="field"><label>Gửi lá thư này cho</label><div class="segmented">${segment('recipientMode','self','Chính tôi')}${segment('recipientMode','other','Người khác')}</div></div><div class="field-row">${field('recipientName','Họ tên người nhận',draft.recipientName,'Nguyễn Minh Anh')}${field('recipientEmail','Email',draft.recipientEmail,'minhanh@example.com','email')}</div><div class="field-row">${field('recipientPhone','Số điện thoại',draft.recipientPhone,'0901 234 567','tel')}${field('deliveryDate','Ngày dự kiến giao',draft.deliveryDate,'','date')}</div><div id="date-message" class="date-message">${dateMessage()}</div><div class="field"><label>Hình thức nhận</label><div class="segmented">${segment('deliveryMethod','email','Email')}${segment('deliveryMethod','physical','Thư vật lý')}</div></div><div class="field" id="address-field"><label for="address">Địa chỉ nhận</label><input id="address" data-draft="address" value="${escapeHtml(draft.address)}" placeholder="Số nhà, tên đường, quận/huyện, tỉnh/thành"/><div class="field-error" data-error="address"></div></div><div class="field"><label for="note">Ghi chú giao hàng <span style="font-weight:400;color:var(--muted)">(không bắt buộc)</span></label><textarea id="note" data-draft="note" style="min-height:95px" placeholder="Ví dụ: Gọi trước khi giao">${escapeHtml(draft.note)}</textarea></div></section><aside class="panel"><h2>Ngày gặp lại</h2><p class="panel-intro">Ngày bạn chọn sẽ trở thành một cột mốc. PostDrop sẽ đồng hành để lá thư không bị lạc đường.</p><div class="mini-envelope" style="width:100%;height:185px;aspect-ratio:auto"><span>${draft.deliveryDate ? formatDate(draft.deliveryDate) : 'Chưa chọn ngày'}</span></div><div class="info-note" style="margin-top:24px">${icon('info')}<span>PostDrop sẽ gửi yêu cầu xác nhận địa chỉ trước ngày giao 30 ngày.</span></div></aside></div>${builderActions(step)}`;
+  const product = pricingProduct();
+  return `<div class="workspace"><section class="panel"><h2>Tóm tắt lá thư</h2><div class="envelope-preview" style="height:190px"><div class="mini-envelope" style="background:${envelopeColor()}"><span>${escapeHtml(draft.title || 'Lá thư của tôi')}</span></div></div><div class="summary-list">${summaryRow('Tiêu đề',draft.title || 'Chưa đặt tên')}${summaryRow('Người nhận',draft.recipientName || 'Chưa điền')}${summaryRow('Ngày gửi',draft.deliveryDate ? formatDate(draft.deliveryDate) : 'Chưa chọn')}${summaryRow('Video nhắn gửi',draft.videoDataUrl ? 'Đã đính kèm video' : 'Không có')}${summaryRow('Hình thức',deliveryLabel())}${summaryRow('Mẫu phong bì',labelize(draft.envelope))}</div><div class="sealed-message">${icon('seal')} <strong>Nội dung sắp được niêm phong.</strong><br/>Bạn sẽ gặp lại những dòng chữ này vào đúng ngày đã chọn.</div></section><aside class="panel"><h2>Chi tiết thanh toán</h2><p class="panel-intro">Thanh toán một lần cho toàn bộ hành trình.</p><div class="summary-list"><div class="summary-row"><span>Phí dịch vụ</span><strong>${pricingMarkup(product)}</strong></div><div class="summary-row total-row"><span>Tổng thanh toán</span><strong>${pricingMarkup(product)}</strong></div></div><label class="seal-check"><input id="seal-confirm" type="checkbox"/><span>Tôi hiểu rằng sau khi niêm phong, nội dung lá thư sẽ không thể chỉnh sửa.</span></label><div class="field-error" data-error="seal"></div>${builderActions(step, true)}</aside></div>`;
 }
 
 function typeCard(type, iconName, title, description, time, price) { const selected = draft.letterType === type; return `<button class="choice-card ${selected ? 'selected' : ''}" data-type="${type}" aria-pressed="${selected}"><span class="choice-check">${selected ? '✓' : ''}</span><div class="choice-visual">${icon(iconName)}</div><h3>${title}</h3><p>${description}</p><div class="service-meta"><span>${time}</span><span>${price}</span></div></button>`; }
@@ -677,7 +713,6 @@ function labelize(value) { return ({
   charcoal: 'Than chì',
 })[value] || value; }
 function deliveryLabel() { return ({ email: 'Email', physical: 'Thư vật lý', hybrid: 'Email và thư vật lý' })[draft.deliveryMethod]; }
-function totalPrice() { return draft.deliveryMethod === 'email' ? '29.000đ' : '84.000đ'; }
 function envelopeColor() { return ({
   burgundy: '#7a263a', olive: '#68705b', terracotta: '#c86b4a', navy: '#29435c',
   forest: '#315847', plum: '#6d3b61', 'dusty-blue': '#6f8fa8', sand: '#b88d64',
@@ -1276,6 +1311,9 @@ async function nextStep(step) {
 function getAuthToken() { return localStorage.getItem('postdrop_access_token') || ''; }
 function setAuthToken(token) { if (token) localStorage.setItem('postdrop_access_token', token); else localStorage.removeItem('postdrop_access_token'); }
 function isLoggedIn() { return !!getAuthToken(); }
+const PENDING_VERIFICATION_EMAIL_KEY = 'postdrop_pending_verification_email';
+function getPendingVerificationEmail() { return localStorage.getItem(PENDING_VERIFICATION_EMAIL_KEY) || ''; }
+function setPendingVerificationEmail(email) { if (email) localStorage.setItem(PENDING_VERIFICATION_EMAIL_KEY, email); else localStorage.removeItem(PENDING_VERIFICATION_EMAIL_KEY); }
 function requireLoginForHandwritten(redirectHash) {
   if (isLoggedIn()) return true;
   if (redirectHash) localStorage.setItem('postdrop_redirect_after_login', redirectHash);
@@ -1287,6 +1325,38 @@ function consumeRedirectAfterLogin() {
   const target = localStorage.getItem('postdrop_redirect_after_login');
   localStorage.removeItem('postdrop_redirect_after_login');
   return target || '/dashboard';
+}
+
+function replaceHash(hash) {
+  history.replaceState(null, '', `${location.pathname}${location.search}#${hash}`);
+}
+
+function consumeEmailConfirmationSession() {
+  const fragment = location.hash.slice(1);
+  if (!fragment.includes('access_token=')) return false;
+  const params = new URLSearchParams(fragment);
+  if (params.get('type') !== 'signup' || !params.get('access_token')) return false;
+  setAuthToken(params.get('access_token'));
+  setPendingVerificationEmail('');
+  replaceHash('/dashboard');
+  return true;
+}
+
+async function renderGuestOnly(renderPage, expectedHash) {
+  if (!getAuthToken()) return renderPage();
+  app.innerHTML = `<main id="main-content" class="auth-page"><section class="auth-form-wrap" style="grid-column:1/-1"><div class="auth-form"><div class="skeleton"></div><p style="text-align:center;margin-top:18px">Đang kiểm tra phiên đăng nhập…</p></div></section></main>`;
+  try {
+    const response = await apiFetch('/api/auth/me');
+    if ((location.hash.slice(1) || '/') !== expectedHash) return;
+    if (response.ok) {
+      replaceHash('/dashboard');
+      return renderDashboard();
+    }
+  } catch (error) {
+    console.warn('Could not validate the current session:', error);
+  }
+  setAuthToken(null);
+  if ((location.hash.slice(1) || '/') === expectedHash) renderPage();
 }
 
 async function ensureAuthToken(email, fullName) {
@@ -1324,7 +1394,7 @@ async function submitLetter() {
   try {
     await ensureAuthToken(draft.recipientEmail, draft.recipientName);
     const expectedArrivalAt = draft.deliveryDate ? new Date(`${draft.deliveryDate}T09:00:00`).toISOString() : new Date(Date.now() + 86400000 * 365).toISOString();
-    const deliveryMethod = (draft.deliveryMethod === 'email' || draft.deliveryMethod === 'hybrid') ? 'digital' : 'physical';
+    const deliveryMethod = draft.deliveryMethod === 'physical' ? 'physical' : 'digital';
     const payload = {
       title: draft.title || 'Lá thư của tôi',
       content: draft.content || '',
@@ -1453,20 +1523,36 @@ async function renderLetterDetail(id) {
       });
     });
 
-    document.querySelector('#btn-view-invoice')?.addEventListener('click', () => {
-      openFormModal({
-        title: 'Hóa đơn dịch vụ PostDrop',
-        bodyHtml: `
-          <div class="summary-list">
-            ${summaryRow('Mã lá thư', `#${letter.id.slice(-8).toUpperCase()}`)}
-            ${summaryRow('Hình thức gửi', ({digital:'Email',physical:'Thư vật lý',email:'Email',hybrid:'Email & Thư vật lý'})[letter.deliveryMethod])}
-            ${summaryRow('Phí dịch vụ', '45.000đ')}
-            ${summaryRow('Trạng thái thanh toán', '<span style="color:var(--success);font-weight:700">Đã thanh toán</span>')}
-          </div>
-        `,
-        confirmText: 'Đóng',
-        onConfirm: () => true
-      });
+    document.querySelector('#btn-view-invoice')?.addEventListener('click', async () => {
+      try {
+        const paymentResponse = await apiFetch(`/api/payments/letter/${letter.id}`);
+        const payment = await paymentResponse.json().catch(() => ({}));
+        if (!paymentResponse.ok) throw new Error(payment.message || 'Không thể tải hóa đơn');
+        const paymentStatus = ({
+          succeeded: 'Đã thanh toán',
+          pending: 'Chờ thanh toán',
+          failed: 'Thanh toán thất bại',
+          cancelled: 'Đã hủy',
+          refunded: 'Đã hoàn tiền',
+        })[payment.status] || payment.status;
+        openFormModal({
+          title: 'Hóa đơn dịch vụ PostDrop',
+          modalClass: 'invoice-modal',
+          bodyHtml: `
+            <div class="summary-list">
+              ${summaryRow('Mã lá thư', `#${letter.id.slice(-8).toUpperCase()}`)}
+              ${summaryRow('Hình thức gửi', ({digital:'Email',physical:'Thư vật lý',email:'Email',hybrid:'Email & Thư vật lý'})[letter.deliveryMethod])}
+              ${summaryRow('Phí dịch vụ', formatMoney(payment.amount, payment.currency))}
+              ${summaryRow('Trạng thái thanh toán', escapeHtml(paymentStatus))}
+            </div>
+          `,
+          cancelText: '',
+          confirmText: 'Đóng',
+          onConfirm: () => true
+        });
+      } catch (error) {
+        toast(error.message || 'Không thể tải hóa đơn.', 'error');
+      }
     });
 
     document.querySelector('#btn-contact-support')?.addEventListener('click', () => {
@@ -1521,7 +1607,15 @@ function renderAuth(mode = 'login') {
         });
         const data = await res.json();
         if (!res.ok) throw new Error(data.message || 'Đăng ký thất bại');
-        if (data.accessToken) setAuthToken(data.accessToken);
+        if (data.emailConfirmationRequired || !data.accessToken) {
+          setAuthToken(null);
+          setPendingVerificationEmail(email);
+          toast('Tài khoản đã được tạo. Hãy xác nhận email để tiếp tục.', 'success');
+          location.hash = '/verify';
+          return;
+        }
+        setAuthToken(data.accessToken);
+        setPendingVerificationEmail('');
         toast('Tạo tài khoản thành công!', 'success');
         setTimeout(() => location.hash = consumeRedirectAfterLogin(), 800);
       } else if (mode === 'login') {
@@ -1532,8 +1626,19 @@ function renderAuth(mode = 'login') {
           body: JSON.stringify({ email, password }),
         });
         const data = await res.json();
-        if (!res.ok) throw new Error(data.message || 'Đăng nhập thất bại');
-        if (data.accessToken) setAuthToken(data.accessToken);
+        if (!res.ok) {
+          const message = String(data.message || 'Đăng nhập thất bại');
+          if (/email not confirmed/i.test(message)) {
+            setPendingVerificationEmail(email);
+            toast('Email của bạn chưa được xác nhận.', 'error');
+            location.hash = '/verify';
+            return;
+          }
+          throw new Error(message);
+        }
+        if (!data.accessToken) throw new Error('Phiên đăng nhập không hợp lệ');
+        setAuthToken(data.accessToken);
+        setPendingVerificationEmail('');
         toast('Đăng nhập thành công!', 'success');
         setTimeout(() => location.hash = consumeRedirectAfterLogin(), 800);
       } else {
@@ -1548,8 +1653,66 @@ function renderAuth(mode = 'login') {
 }
 
 function renderVerify() {
-  app.innerHTML = `<main id="main-content" class="auth-page"><section class="auth-art"><div><small>POSTDROP · MỘT BƯỚC NHỎ NỮA</small><blockquote>“Mỗi lá thư đều cần một địa chỉ để tìm đường đến tương lai.”</blockquote></div></section><section class="auth-form-wrap"><div class="auth-form">${brand()}<div class="step-icon" style="margin:0 0 28px">${icon('mail')}</div><h1>Kiểm tra hộp thư của bạn</h1><p>Chúng tôi đã gửi liên kết xác thực đến email bạn vừa đăng ký. Liên kết có hiệu lực trong 30 phút.</p><a class="button button-primary auth-submit" href="#/dashboard">Tôi đã xác thực email</a><button class="button button-ghost auth-submit" id="resend-email">Gửi lại email xác thực</button><p class="auth-helper">Nhập nhầm email? <a class="text-button" href="#/register">Quay lại đăng ký</a></p></div></section></main>`;
-  document.querySelector('#resend-email').onclick = () => toast('Email xác thực mới đã được gửi.', 'success');
+  const pendingEmail = getPendingVerificationEmail();
+  app.innerHTML = `<main id="main-content" class="auth-page"><section class="auth-art"><div><small>POSTDROP · MỘT BƯỚC NHỎ NỮA</small><blockquote>“Mỗi lá thư đều cần một địa chỉ để tìm đường đến tương lai.”</blockquote></div></section><section class="auth-form-wrap"><form class="auth-form" id="verification-form">${brand()}<div class="step-icon" style="margin:0 0 28px">${icon('mail')}</div><h1>Kiểm tra hộp thư của bạn</h1><p>Chúng tôi đã gửi liên kết xác nhận đến email của bạn. Sau khi bấm liên kết trong email, quay lại đây và nhập mật khẩu để kiểm tra.</p>${field('verificationEmail','Email',pendingEmail,'ban@example.com','email')}${field('verificationPassword','Mật khẩu','','••••••••','password')}<button class="button button-primary auth-submit" type="submit">Kiểm tra và tiếp tục</button><button class="button button-ghost auth-submit" type="button" id="resend-email">Gửi lại email xác nhận</button><p class="auth-helper">Dùng tài khoản khác? <a class="text-button" href="#/register" id="change-verification-account">Quay lại đăng ký</a></p></form></section></main>`;
+  const form = document.querySelector('#verification-form');
+  form.onsubmit = async (event) => {
+    event.preventDefault();
+    const email = form.querySelector('#verificationEmail').value.trim();
+    const password = form.querySelector('#verificationPassword').value;
+    const button = form.querySelector('button[type="submit"]');
+    button.disabled = true;
+    button.textContent = 'Đang kiểm tra…';
+    try {
+      const response = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ email, password }),
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok || !data.accessToken) {
+        const message = String(data.message || 'Email chưa được xác nhận hoặc mật khẩu chưa đúng');
+        throw new Error(/email not confirmed/i.test(message) ? 'Email vẫn chưa được xác nhận. Hãy kiểm tra hộp thư rồi thử lại.' : message);
+      }
+      setAuthToken(data.accessToken);
+      setPendingVerificationEmail('');
+      toast('Email đã được xác nhận. Chào mừng bạn đến PostDrop!', 'success');
+      location.hash = consumeRedirectAfterLogin();
+    } catch (error) {
+      toast(error.message || 'Chưa thể kiểm tra trạng thái xác nhận.', 'error');
+      button.disabled = false;
+      button.textContent = 'Kiểm tra và tiếp tục';
+    }
+  };
+  document.querySelector('#resend-email').onclick = async () => {
+    const email = form.querySelector('#verificationEmail').value.trim();
+    if (!/^\S+@\S+\.\S+$/.test(email)) {
+      toast('Vui lòng nhập email hợp lệ.', 'error');
+      return;
+    }
+    const button = document.querySelector('#resend-email');
+    button.disabled = true;
+    button.textContent = 'Đang gửi…';
+    try {
+      const response = await fetch('/api/auth/resend-confirmation', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ email }),
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(data.message || 'Không thể gửi lại email xác nhận');
+      setPendingVerificationEmail(email);
+      toast('Email xác nhận mới đã được gửi.', 'success');
+    } catch (error) {
+      toast(error.message || 'Không thể gửi lại email xác nhận.', 'error');
+    } finally {
+      button.disabled = false;
+      button.textContent = 'Gửi lại email xác nhận';
+    }
+  };
+  document.querySelector('#change-verification-account').onclick = () => setPendingVerificationEmail('');
 }
 
 function route() {
@@ -1587,10 +1750,10 @@ function route() {
   if (hash === '/success') return renderSuccess();
   if (hash === '/dashboard') return renderDashboard();
   if (hash.startsWith('/letters/')) return renderLetterDetail(hash.split('/')[2]);
-  if (hash === '/login') return renderAuth('login');
-  if (hash === '/register') return renderAuth('register');
-  if (hash === '/forgot') return renderAuth('forgot');
-  if (hash === '/verify') return renderVerify();
+  if (hash === '/login') return void renderGuestOnly(() => renderAuth('login'), hash);
+  if (hash === '/register') return void renderGuestOnly(() => renderAuth('register'), hash);
+  if (hash === '/forgot') return void renderGuestOnly(() => renderAuth('forgot'), hash);
+  if (hash === '/verify') return void renderGuestOnly(renderVerify, hash);
   renderLanding();
 }
 
@@ -1789,5 +1952,8 @@ window.addEventListener('postdrop-video-back', () => {
 });
 
 window.addEventListener('hashchange', route);
+const emailConfirmationCompleted = consumeEmailConfirmationSession();
 initIntro();
 route();
+void loadPricingCatalog();
+if (emailConfirmationCompleted) toast('Email đã được xác nhận. Chào mừng bạn đến PostDrop!', 'success');

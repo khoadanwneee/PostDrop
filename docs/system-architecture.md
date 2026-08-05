@@ -104,6 +104,7 @@ API dùng global prefix `/api`, `ValidationPipe` với whitelist, transform và 
 | `GET` | `/api/health` | Không | Đã có |
 | `POST` | `/api/auth/register` | Không | Đã có |
 | `POST` | `/api/auth/login` | Không | Đã có |
+| `POST` | `/api/auth/resend-confirmation` | Không | Đã có |
 | `POST` | `/api/auth/refresh` | Refresh cookie | Đã có |
 | `POST` | `/api/auth/logout` | Bearer + cookie | Đã có |
 | `GET` | `/api/auth/me` | Bearer | Đã có |
