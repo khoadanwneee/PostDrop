@@ -53,6 +53,10 @@ export function useCameraRecorder(
   const chunksRef = useRef<Blob[]>([]);
   const timerIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const countdownTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const streamRef = useRef<MediaStream | null>(null);
+  const previewUrlRef = useRef<string | null>(null);
+  const permissionRequestRef = useRef<number>(0);
+  const mountedRef = useRef<boolean>(true);
 
   // Pick supported MIME type
   const getSupportedMimeType = useCallback(() => {
@@ -74,14 +78,34 @@ export function useCameraRecorder(
     }
   }, []);
 
+  const releaseMediaResources = useCallback(() => {
+    permissionRequestRef.current += 1;
+    if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
+    if (countdownTimerRef.current) clearInterval(countdownTimerRef.current);
+    timerIntervalRef.current = null;
+    countdownTimerRef.current = null;
+
+    const recorder = mediaRecorderRef.current;
+    if (recorder && recorder.state !== 'inactive') {
+      recorder.ondataavailable = null;
+      recorder.onstop = null;
+      recorder.stop();
+    }
+    mediaRecorderRef.current = null;
+
+    stopStreamTracks(streamRef.current);
+    streamRef.current = null;
+  }, [stopStreamTracks]);
+
   // Close camera and release resources
   const closeCamera = useCallback(() => {
-    stopStreamTracks(stream);
+    releaseMediaResources();
     setStream(null);
+    setCountdown(null);
     if (cameraState !== 'recorded' && cameraState !== 'completed') {
       setCameraState('idle');
     }
-  }, [cameraState, stopStreamTracks, stream]);
+  }, [cameraState, releaseMediaResources]);
 
   // Request camera and microphone access
   const requestCameraPermission = useCallback(async () => {
@@ -105,9 +129,12 @@ export function useCameraRecorder(
 
     setCameraState('requesting-permission');
     setErrorDetails(null);
+    const requestId = permissionRequestRef.current + 1;
+    permissionRequestRef.current = requestId;
 
     // Stop current stream if switching modes
-    stopStreamTracks(stream);
+    stopStreamTracks(streamRef.current);
+    streamRef.current = null;
 
     let newStream: MediaStream | null = null;
     let audioSuccess = true;
@@ -119,6 +146,7 @@ export function useCameraRecorder(
         audio: true,
       });
     } catch {
+      if (!mountedRef.current || permissionRequestRef.current !== requestId) return;
       try {
         // Fallback facingMode without exact constraint
         newStream = await navigator.mediaDevices.getUserMedia({
@@ -126,6 +154,7 @@ export function useCameraRecorder(
           audio: true,
         });
       } catch {
+        if (!mountedRef.current || permissionRequestRef.current !== requestId) return;
         try {
           // Fallback to video only if mic is unavailable or blocked
           newStream = await navigator.mediaDevices.getUserMedia({
@@ -156,25 +185,32 @@ export function useCameraRecorder(
       }
     }
 
+    if (!mountedRef.current || permissionRequestRef.current !== requestId) {
+      stopStreamTracks(newStream);
+      return;
+    }
+
     setHasAudio(audioSuccess);
+    streamRef.current = newStream;
     setStream(newStream);
     setSelectedMimeType(getSupportedMimeType());
     setCameraState('camera-ready');
-  }, [facingMode, getSupportedMimeType, stopStreamTracks, stream]);
+  }, [facingMode, getSupportedMimeType, stopStreamTracks]);
 
   // Toggle camera (Front / Back)
   const toggleFacingMode = useCallback(async () => {
     const nextMode = facingMode === 'user' ? 'environment' : 'user';
     setFacingMode(nextMode);
     if (cameraState === 'camera-ready') {
-      stopStreamTracks(stream);
+      stopStreamTracks(streamRef.current);
+      streamRef.current = null;
       setStream(null);
       // Wait microtask to apply new facingMode in requestCameraPermission
       setTimeout(() => {
         requestCameraPermission();
       }, 50);
     }
-  }, [cameraState, facingMode, requestCameraPermission, stopStreamTracks, stream]);
+  }, [cameraState, facingMode, requestCameraPermission, stopStreamTracks]);
 
   // Toggle Mute audio track
   const toggleMute = useCallback(() => {
@@ -225,7 +261,8 @@ export function useCameraRecorder(
       };
 
       recorder.onstop = () => {
-        stopStreamTracks(stream);
+        stopStreamTracks(streamRef.current || stream);
+        streamRef.current = null;
         setStream(null);
 
         // Strip codec query parameter for clean playable Blob MIME type
@@ -315,27 +352,33 @@ export function useCameraRecorder(
 
   // Reset all state
   const resetAll = useCallback(() => {
-    if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
-    if (countdownTimerRef.current) clearInterval(countdownTimerRef.current);
-    stopStreamTracks(stream);
-    revokeVideoObjectUrl(previewUrl);
+    releaseMediaResources();
+    revokeVideoObjectUrl(previewUrlRef.current);
+    previewUrlRef.current = null;
     setStream(null);
     setVideoBlob(null);
     setPreviewUrl(null);
     setRecordingSeconds(0);
     setErrorDetails(null);
+    setCountdown(null);
     setCameraState('idle');
-  }, [previewUrl, stopStreamTracks, stream]);
+  }, [releaseMediaResources]);
 
-  // Cleanup on unmount
   useEffect(() => {
+    previewUrlRef.current = previewUrl;
+  }, [previewUrl]);
+
+  // Cleanup on unmount. Refs ensure that even a newly acquired stream is
+  // released instead of relying on state captured by an older render.
+  useEffect(() => {
+    mountedRef.current = true;
     return () => {
-      if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
-      if (countdownTimerRef.current) clearInterval(countdownTimerRef.current);
-      stopStreamTracks(stream);
-      revokeVideoObjectUrl(previewUrl);
+      mountedRef.current = false;
+      releaseMediaResources();
+      revokeVideoObjectUrl(previewUrlRef.current);
+      previewUrlRef.current = null;
     };
-  }, [previewUrl, stopStreamTracks, stream]);
+  }, [releaseMediaResources]);
 
   return {
     cameraState,

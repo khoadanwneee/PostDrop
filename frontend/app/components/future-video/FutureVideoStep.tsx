@@ -1,7 +1,10 @@
-import { useRef, useState, type ReactElement } from 'react';
+import { useCallback, useEffect, useRef, useState, type ReactElement } from 'react';
 import { useCameraRecorder } from '../../hooks/useCameraRecorder';
 import { useVideoUpload } from '../../hooks/useVideoUpload';
-import { revokeVideoObjectUrl } from '../../services/futureVideoService';
+import {
+  revokeVideoObjectUrl,
+  validateFutureVideoFile,
+} from '../../services/futureVideoService';
 import type { UploadedVideo } from '../../types/future-video';
 import { CameraPermissionState } from './CameraPermissionState';
 import { CameraRecorder } from './CameraRecorder';
@@ -27,6 +30,7 @@ export function FutureVideoStep({
   const [showSkipModal, setShowSkipModal] = useState<boolean>(false);
   const [filePreviewUrl, setFilePreviewUrl] = useState<string | null>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [fileError, setFileError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const {
@@ -47,6 +51,7 @@ export function FutureVideoStep({
     toggleFacingMode,
     toggleMute,
     closeCamera,
+    resetAll,
   } = useCameraRecorder();
 
   const {
@@ -57,30 +62,37 @@ export function FutureVideoStep({
     resetUpload,
   } = useVideoUpload();
 
-  // Handle local video file upload selection
-  const handleDeviceFileSelect = (evt: React.ChangeEvent<HTMLInputElement>) => {
-    const file = evt.target.files?.[0];
-    if (!file) return;
-
-    if (!file.type.startsWith('video/')) {
-      alert('Tệp đã chọn không phải tệp video hợp lệ.');
-      return;
-    }
-
-    if (file.size > 100 * 1024 * 1024) {
-      alert('Tệp video vượt quá dung lượng cho phép (100 MB).');
-      return;
-    }
-
+  const handleVideoFile = useCallback((file: File) => {
+    const validationError = validateFutureVideoFile(file);
+    setFileError(validationError);
+    if (validationError) return;
     revokeVideoObjectUrl(filePreviewUrl);
     const url = URL.createObjectURL(file);
     setSelectedFile(file);
     setFilePreviewUrl(url);
+  }, [filePreviewUrl]);
+
+  // Handle local video file upload selection
+  const handleDeviceFileSelect = (evt: React.ChangeEvent<HTMLInputElement>) => {
+    const file = evt.target.files?.[0];
+    if (!file) return;
+    handleVideoFile(file);
     evt.target.value = '';
   };
 
   const activePreviewUrl =
     previewUrl || filePreviewUrl || initialVideoUrl || '';
+
+  const releaseStepResources = useCallback(() => {
+    resetAll();
+    revokeVideoObjectUrl(filePreviewUrl);
+    setSelectedFile(null);
+    setFilePreviewUrl(null);
+  }, [filePreviewUrl, resetAll]);
+
+  useEffect(() => {
+    return () => revokeVideoObjectUrl(filePreviewUrl);
+  }, [filePreviewUrl]);
 
   // Confirm and upload video
   const handleUseVideo = async () => {
@@ -98,9 +110,11 @@ export function FutureVideoStep({
         recordingSeconds,
       );
       if (result) {
+        releaseStepResources();
         onVideoConfirmed(result);
       }
     } else if (initialVideoUrl) {
+      releaseStepResources();
       onVideoConfirmed({
         id: `existing_${Date.now()}`,
         url: initialVideoUrl,
@@ -111,6 +125,16 @@ export function FutureVideoStep({
         createdAt: new Date().toISOString(),
       });
     }
+  };
+
+  const handleBackStep = () => {
+    releaseStepResources();
+    onBackStep?.();
+  };
+
+  const handleSkipStep = () => {
+    releaseStepResources();
+    onSkipStep();
   };
 
   // Discard video / retake
@@ -158,8 +182,10 @@ export function FutureVideoStep({
             <CameraPermissionState
               cameraState={cameraState}
               errorDetails={errorDetails}
+              fileError={fileError}
               onRequestPermission={requestCameraPermission}
               onSelectFileClick={() => fileInputRef.current?.click()}
+              onFileDrop={handleVideoFile}
             />
           )}
 
@@ -198,20 +224,18 @@ export function FutureVideoStep({
 
       {/* Bottom Bar Actions */}
       <div className="builder-actions future-video-actions">
-        {onBackStep ? (
-          <button
-            type="button"
-            className="button button-secondary"
-            onClick={onBackStep}
-            disabled={isUploading || cameraState === 'recording'}
-          >
-            Quay lại bước 3
-          </button>
-        ) : (
-          <span />
-        )}
-
+        <span />
         <div className="builder-actions-group">
+          {onBackStep && (
+            <button
+              type="button"
+              className="button button-secondary"
+              onClick={handleBackStep}
+              disabled={isUploading || cameraState === 'recording'}
+            >
+              Quay lại
+            </button>
+          )}
           <button
             type="button"
             className="button button-secondary btn-skip-video"
@@ -225,13 +249,28 @@ export function FutureVideoStep({
 
       {/* Skip Confirmation Dialog */}
       {showSkipModal && (
-        <div className="modal-backdrop" role="dialog" aria-modal="true">
+        <div
+          className="modal-backdrop"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="skip-video-modal-title"
+        >
           <div className="modal skip-confirmation-modal">
-            <h2>Bạn có chắc muốn bỏ qua video?</h2>
-            <p>
-              Bạn vẫn có thể tiếp tục tạo bức thư mà không cần quay video. Lời
-              nhắn chữ của bạn vẫn được lưu giữ nguyên vẹn.
-            </p>
+            <div className="skip-modal-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                <rect x="3" y="6" width="13" height="12" rx="2" />
+                <path d="m16 10 5-3v10l-5-3" />
+                <path d="M8 10.5v3M6.5 12h3" />
+              </svg>
+            </div>
+            <div className="skip-modal-copy">
+              <span className="skip-modal-kicker">Bước không bắt buộc</span>
+              <h2 id="skip-video-modal-title">Bỏ qua lời nhắn video?</h2>
+              <p>
+                Bạn vẫn có thể tiếp tục tạo lá thư. Toàn bộ lời nhắn chữ và
+                thiết kế hiện tại sẽ được giữ nguyên.
+              </p>
+            </div>
             <div className="modal-actions">
               <button
                 type="button"
@@ -245,7 +284,7 @@ export function FutureVideoStep({
                 className="button button-primary"
                 onClick={() => {
                   setShowSkipModal(false);
-                  onSkipStep();
+                  handleSkipStep();
                 }}
               >
                 Bỏ qua và sang bước 4
