@@ -71,7 +71,8 @@ npm run build
 2. Chọn **Viết thư cho tương lai**.
 3. Đi qua 5 bước: Loại thư → Nội dung → Thiết kế → Giao thư → Xác nhận.
 4. Xác nhận điều khoản niêm phong và chọn **Thanh toán và niêm phong**.
-5. Xem màn hình thành công, dashboard và trang chi tiết lá thư.
+5. Hoàn tất checkout thử nghiệm; backend chỉ niêm phong thư sau khi thanh toán thành công.
+6. Xem màn hình thành công, dashboard và trang chi tiết lá thư.
 
 Form có validation trực tiếp, tự lưu nháp vào `localStorage`, hỗ trợ trạng thái loading/error/success và bố cục mobile riêng cho trình soạn thư.
 
@@ -89,7 +90,9 @@ Form có validation trực tiếp, tự lưu nháp vào `localStorage`, hỗ tr�
 | `POST` | `/api/letters` | Tạo bản nháp |
 | `PATCH` | `/api/letters/:id` | Cập nhật thư chưa niêm phong |
 | `DELETE` | `/api/letters/:id` | Xóa bản nháp |
-| `POST` | `/api/letters/:id/seal` | Mã hóa, niêm phong và lên lịch thư |
+| `POST` | `/api/payments/checkout` | Tạo checkout cho một bản nháp hợp lệ |
+| `GET` | `/api/payments/:id` | Xem trạng thái thanh toán |
+| `GET/POST` | `/api/mock-payments/:id/*` | Checkout thử nghiệm; thanh toán thành công sẽ niêm phong thư |
 | `GET` | `/api/assets/built-in` | Danh sách sticker/media có sẵn |
 | `GET` | `/api/assets/mine` | Media do người dùng tải lên |
 | `POST` | `/api/assets/uploads` | Tạo signed upload cho ảnh/video/sticker |

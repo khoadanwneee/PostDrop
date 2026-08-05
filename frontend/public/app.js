@@ -1334,37 +1334,38 @@ async function submitLetter() {
       address: draft.address || undefined,
       expectedArrivalAt,
       deliveryMethod,
+      ...(deliveryMethod === 'physical' ? { physicalFulfillmentMode: 'print_design' } : {}),
       letterType: draft.letterType === 'handwritten' ? 'handwritten' : 'online',
       paper: labelize(draft.paper),
       font: draft.font,
       envelope: labelize(draft.envelope),
       note: draft.note || undefined,
     };
-    const createdResponse = await apiFetch('/api/letters', { method: 'POST', body: JSON.stringify(payload) });
+    const pendingLetterId = localStorage.getItem('postdrop-pending-letter-id');
+    let createdResponse = pendingLetterId
+      ? await apiFetch(`/api/letters/${pendingLetterId}`, { method: 'PATCH', body: JSON.stringify(payload) })
+      : null;
+    if (!createdResponse?.ok) {
+      localStorage.removeItem('postdrop-pending-letter-id');
+      createdResponse = await apiFetch('/api/letters', { method: 'POST', body: JSON.stringify(payload) });
+    }
     if (!createdResponse.ok) {
       const errJson = await createdResponse.json().catch(() => ({}));
       throw new Error(errJson.message || 'Không thể tạo lá thư');
     }
     const created = await createdResponse.json();
-    const sealResponse = await apiFetch(`/api/letters/${created.id}/seal`, { method: 'POST' });
-    if (!sealResponse.ok) {
-      const errJson = await sealResponse.json().catch(() => ({}));
-      throw new Error(errJson.message || 'Không thể niêm phong');
+    localStorage.setItem('postdrop-pending-letter-id', created.id);
+    const checkoutResponse = await apiFetch('/api/payments/checkout', {
+      method: 'POST',
+      body: JSON.stringify({ letterId: created.id }),
+    });
+    if (!checkoutResponse.ok) {
+      const errJson = await checkoutResponse.json().catch(() => ({}));
+      throw new Error(errJson.message || 'Không thể bắt đầu thanh toán');
     }
-    currentLetter = await sealResponse.json();
-    const previousDraftId = draft.draftId;
-    clearTimeout(saveTimer);
-    localStorage.removeItem('postdrop-draft');
-    localStorage.removeItem(EDITOR_DRAFT_STORAGE_KEY);
-    draft = {
-      ...defaultDraft,
-      deliveryDate: futureDate(),
-      decorations: [],
-      userElements: [],
-      draftId: createDraftId(),
-    };
-    window.dispatchEvent(new CustomEvent('postdrop-draft-reset', { detail: { previousDraftId, draftId: draft.draftId } }));
-    location.hash = '/success';
+    const checkout = await checkoutResponse.json();
+    if (!checkout.checkoutUrl) throw new Error('Checkout không trả về đường dẫn thanh toán');
+    window.location.assign(checkout.checkoutUrl);
   } catch (error) {
     toast(error.message || 'Chưa thể niêm phong lúc này. Vui lòng thử lại.', 'error');
     if (next) { next.disabled = false; next.innerHTML = `Thanh toán và niêm phong${icon('seal')}`; }
