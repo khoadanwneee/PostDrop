@@ -200,7 +200,7 @@ p { color: var(--gray); }
 .occasion { padding: 13px 18px; border: 1px solid var(--border); border-radius: 99px; background: var(--paper); font-weight: 600; color: var(--gray); }
 .trust-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 18px; }
 .trust-item { padding: 22px 0; border-top: 2px solid var(--olive); }.trust-item .icon { color: var(--olive); margin-bottom: 18px; }.trust-item p { font-size: .82rem; }
-.pricing-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; align-items: stretch; }
+.pricing-grid { display: grid; grid-template-columns: repeat(2, 1fr); max-width: 820px; margin: 0 auto; gap: 24px; align-items: stretch; }
 .price-card { position: relative; padding: 30px; border: 1px solid var(--border); border-radius: 16px; background: var(--paper); }
 .price-card.featured { border: 2px solid var(--burgundy); transform: translateY(-10px); }
 .mini-stamp { position: absolute; top: -17px; right: 20px; padding: 7px 10px; background: var(--burgundy); color: white; transform: rotate(3deg); font-size: .64rem; font-weight: 700; }
