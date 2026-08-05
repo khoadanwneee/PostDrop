@@ -99,6 +99,11 @@ export class PaymentsService {
     return this.toResponse(context);
   }
 
+  async findByLetter(ownerId: string, letterId: string) {
+    const context = await this.repository.findByLetterId(ownerId, letterId);
+    return this.toResponse(context);
+  }
+
   async simulate(
     supabase: SupabaseClient,
     ownerId: string,

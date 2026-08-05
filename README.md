@@ -83,6 +83,7 @@ Form có validation trực tiếp, tự lưu nháp vào `localStorage`, hỗ tr�
 | `GET` | `/api/health` | Kiểm tra dịch vụ |
 | `POST` | `/api/auth/register` | Đăng ký bằng Supabase Auth |
 | `POST` | `/api/auth/login` | Đăng nhập |
+| `POST` | `/api/auth/resend-confirmation` | Gửi lại email xác nhận tài khoản |
 | `GET` | `/api/auth/me` | Thông tin người dùng hiện tại |
 | `GET` | `/api/letters` | Danh sách thư của người dùng |
 | `GET` | `/api/letters/dashboard` | Thống kê và danh sách dashboard |

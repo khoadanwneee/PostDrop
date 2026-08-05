@@ -126,11 +126,15 @@ Supabase Dashboard.
 | --- | --- | --- |
 | `POST` | `/api/auth/register` | Public |
 | `POST` | `/api/auth/login` | Public |
+| `POST` | `/api/auth/resend-confirmation` | Public |
 | `POST` | `/api/auth/refresh` | Public |
 | `POST` | `/api/auth/logout` | Bearer token |
 | `GET` | `/api/auth/me` | Bearer token |
 
-Registration, login, and refresh return the short-lived access token in JSON:
+Registration, login, and refresh return the short-lived access token in JSON.
+When email confirmation is enabled, registration instead returns a null session
+with `emailConfirmationRequired: true`; the user must confirm the email before
+login can establish a session:
 
 ```json
 {
@@ -171,6 +175,11 @@ The current `SameSite=Lax` setting assumes the frontend and API are same-site,
 such as the frontend proxying `/api` to NestJS. If they are deployed on
 unrelated domains, the cookie and CSRF design must be revisited.
 
+Deleting an Auth user cascades through all PostDrop-owned relational data,
+including letters, fulfillment, attachments, reveal records, orders, payments,
+and payment events. User-owned Storage objects are outside PostgreSQL foreign
+keys and must be removed through the Supabase Storage API first.
+
 ## Letter endpoints
 
 | Method | Endpoint | Description |
@@ -193,8 +202,10 @@ contact a provider or transfer money.
 
 | Method | Endpoint | Description |
 | --- | --- | --- |
+| `GET` | `/api/pricing` | Read the current public digital and physical price catalog |
 | `POST` | `/api/payments/checkout` | Create or reuse a server-priced checkout |
 | `GET` | `/api/payments/:id` | Read the authenticated owner's payment state |
+| `GET` | `/api/payments/letter/:letterId` | Read the authenticated owner's payment state by letter |
 | `POST` | `/api/payments/:id/mock/complete` | Confirm payment and seal the letter |
 | `POST` | `/api/payments/:id/mock/fail` | Simulate a failed payment |
 | `POST` | `/api/payments/:id/mock/cancel` | Simulate cancellation |
@@ -208,10 +219,10 @@ Create checkout with the draft letter ID:
 }
 ```
 
-The `mock-v1` amounts are explicit engineering placeholders: 10,000 VND for a
-digital letter, 20,000 VND for a printed-design letter, and 30,000 VND for a
-stored original. They are not production pricing. The response includes the
-available development action paths and a provider-style `checkoutUrl`.
+The `mock-v2` catalog is the single source of truth for both checkout and the
+frontend: 29,000 VND for a digital letter and 49,000 VND for either physical
+fulfillment mode. The response includes the available development action paths
+and a provider-style `checkoutUrl`.
 
 `checkoutUrl` points to the future frontend route configured by the existing
 `PUBLIC_APP_URL` setting:

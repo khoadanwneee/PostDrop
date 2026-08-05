@@ -7,10 +7,11 @@ import { PaymentsController } from './payments.controller';
 import { PaymentsRepository } from './payments.repository';
 import { PaymentsService } from './payments.service';
 import { PricingService } from './pricing.service';
+import { PricingController } from './pricing.controller';
 
 @Module({
   imports: [LettersModule],
-  controllers: [PaymentsController, MockPaymentsController],
+  controllers: [PaymentsController, MockPaymentsController, PricingController],
   providers: [
     MockPaymentProvider,
     PaymentsRepository,

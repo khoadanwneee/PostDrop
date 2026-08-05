@@ -1,6 +1,20 @@
 import { apiFetch, readErrorMessage } from '../lib/api-client';
 import type { FutureVideoData, UploadedVideo } from '../types/future-video';
 
+export const MAX_FUTURE_VIDEO_SIZE_BYTES = 100 * 1024 * 1024;
+
+export function validateFutureVideoFile(
+  file: Pick<File, 'type' | 'size'>,
+): string | null {
+  if (!file.type.startsWith('video/')) {
+    return 'Tệp đã chọn không phải video hợp lệ.';
+  }
+  if (file.size > MAX_FUTURE_VIDEO_SIZE_BYTES) {
+    return 'Video cần có dung lượng không quá 100 MB.';
+  }
+  return null;
+}
+
 /**
  * Derives file extension from MIME type.
  */

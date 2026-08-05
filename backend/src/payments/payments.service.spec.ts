@@ -29,8 +29,8 @@ describe('PaymentsService', () => {
       owner_id: ownerId,
       letter_id: letterId,
       product_code: 'digital_letter',
-      pricing_version: 'mock-v1',
-      amount: 10_000,
+      pricing_version: 'mock-v2',
+      amount: 29_000,
       currency: 'VND',
       status: 'pending',
       paid_at: null,
@@ -44,7 +44,7 @@ describe('PaymentsService', () => {
       order_id: orderId,
       provider: 'mock',
       provider_payment_id: `mock_payment_${paymentId}`,
-      amount: 10_000,
+      amount: 29_000,
       currency: 'VND',
       status: 'pending',
       failure_code: null,
@@ -88,6 +88,7 @@ describe('PaymentsService', () => {
     repository = {
       findLetter: jest.fn(),
       findByPaymentId: jest.fn(),
+      findByLetterId: jest.fn(),
       findReusableCheckout: jest.fn(),
       createCheckout: jest.fn(),
       applyEvent: jest.fn(),
@@ -147,14 +148,14 @@ describe('PaymentsService', () => {
         ownerId,
         letterId,
         productCode: 'digital_letter',
-        amount: 10_000,
+        amount: 29_000,
         currency: 'VND',
       }),
     );
     expect(result).toMatchObject({
       provider: 'mock',
       status: 'pending',
-      amount: 10_000,
+      amount: 29_000,
       currency: 'VND',
       checkoutUrl: expect.stringContaining('/checkout?'),
     });
@@ -163,6 +164,18 @@ describe('PaymentsService', () => {
       expect.stringMatching(/^[0-9a-f]{64}$/),
       expect.any(String),
     );
+  });
+
+  it('returns the persisted payment amount for a letter invoice', async () => {
+    repository.findByLetterId.mockResolvedValue(paidContext());
+
+    await expect(service.findByLetter(ownerId, letterId)).resolves.toMatchObject({
+      letterId,
+      amount: 29_000,
+      currency: 'VND',
+      status: 'succeeded',
+    });
+    expect(repository.findByLetterId).toHaveBeenCalledWith(ownerId, letterId);
   });
 
   it('seals the letter only after a successful payment event', async () => {
@@ -275,7 +288,7 @@ describe('PaymentsService', () => {
       provider: 'mock',
       merchant: { name: 'PostDrop' },
       paymentId,
-      amount: 10_000,
+      amount: 29_000,
       currency: 'VND',
       status: 'pending',
       actions: {

@@ -95,6 +95,18 @@ export class PaymentsRepository {
     };
   }
 
+  async findByLetterId(
+    ownerId: string,
+    letterId: string,
+  ): Promise<PaymentContext> {
+    const order = await this.findOrder(ownerId, letterId);
+    if (!order) {
+      throw new NotFoundException('Payment not found');
+    }
+    const payment = await this.findLatestPayment(order.id);
+    return { order, payment };
+  }
+
   async findReusableCheckout(
     ownerId: string,
     letterId: string,

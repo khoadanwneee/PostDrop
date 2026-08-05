@@ -7,20 +7,35 @@ interface PriceableLetter {
 }
 
 const MOCK_PRICES: Record<ProductCode, number> = {
-  digital_letter: 10_000,
-  printed_letter: 20_000,
-  stored_original: 30_000,
+  digital_letter: 29_000,
+  printed_letter: 49_000,
+  stored_original: 49_000,
 };
 
 @Injectable()
 export class PricingService {
+  catalog() {
+    return {
+      pricingVersion: 'mock-v2',
+      currency: 'VND' as const,
+      digital: {
+        productCode: 'digital_letter' as const,
+        amount: MOCK_PRICES.digital_letter,
+      },
+      physical: {
+        productCode: 'printed_letter' as const,
+        amount: MOCK_PRICES.printed_letter,
+      },
+    };
+  }
+
   quote(letter: PriceableLetter) {
     const productCode = this.productCode(letter);
     return {
       productCode,
       amount: MOCK_PRICES[productCode],
       currency: 'VND' as const,
-      pricingVersion: 'mock-v1',
+      pricingVersion: 'mock-v2',
     };
   }
 

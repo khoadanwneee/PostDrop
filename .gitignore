@@ -17,3 +17,5 @@ frontend/public/ffmpeg/
 *.tsbuildinfo
 *.log
 .DS_Store
+
+tmp/
