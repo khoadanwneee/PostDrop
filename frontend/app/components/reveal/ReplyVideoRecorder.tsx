@@ -2,7 +2,10 @@
 
 import { useRef, useState, type ReactElement } from 'react';
 import { useCameraRecorder } from '../../hooks/useCameraRecorder';
-import { revokeVideoObjectUrl } from '../../services/futureVideoService';
+import {
+  revokeVideoObjectUrl,
+  validateFutureVideoFile,
+} from '../../services/futureVideoService';
 import { DEFAULT_VIDEO_CONFIG } from '../../types/future-video';
 import { CameraPermissionState } from '../future-video/CameraPermissionState';
 import { CameraRecorder } from '../future-video/CameraRecorder';
@@ -12,10 +15,6 @@ interface ReplyVideoRecorderProps {
   onReplyReady: (video: Blob, durationSeconds: number) => void;
   disabled?: boolean;
 }
-
-const MAX_SIZE_MB = Math.round(
-  DEFAULT_VIDEO_CONFIG.maxSizeBytes / (1024 * 1024),
-);
 
 /**
  * Records (or accepts an uploaded) reply clip on the reveal page. Reuses the
@@ -29,6 +28,7 @@ export function ReplyVideoRecorder({
 }: ReplyVideoRecorderProps): ReactElement {
   const [filePreviewUrl, setFilePreviewUrl] = useState<string | null>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [fileError, setFileError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const {
@@ -51,20 +51,19 @@ export function ReplyVideoRecorder({
     closeCamera,
   } = useCameraRecorder();
 
-  const handleDeviceFileSelect = (evt: React.ChangeEvent<HTMLInputElement>) => {
-    const file = evt.target.files?.[0];
-    if (!file) return;
-    if (!file.type.startsWith('video/')) {
-      alert('Tệp đã chọn không phải tệp video hợp lệ.');
-      return;
-    }
-    if (file.size > DEFAULT_VIDEO_CONFIG.maxSizeBytes) {
-      alert(`Tệp video vượt quá dung lượng cho phép (${MAX_SIZE_MB} MB).`);
-      return;
-    }
+  const handleVideoFile = (file: File) => {
+    const validationError = validateFutureVideoFile(file);
+    setFileError(validationError);
+    if (validationError) return;
     revokeVideoObjectUrl(filePreviewUrl);
     setSelectedFile(file);
     setFilePreviewUrl(URL.createObjectURL(file));
+  };
+
+  const handleDeviceFileSelect = (evt: React.ChangeEvent<HTMLInputElement>) => {
+    const file = evt.target.files?.[0];
+    if (!file) return;
+    handleVideoFile(file);
     evt.target.value = '';
   };
 
@@ -102,8 +101,10 @@ export function ReplyVideoRecorder({
             <CameraPermissionState
               cameraState={cameraState}
               errorDetails={errorDetails}
+              fileError={fileError}
               onRequestPermission={requestCameraPermission}
               onSelectFileClick={() => fileInputRef.current?.click()}
+              onFileDrop={handleVideoFile}
             />
           )}
 

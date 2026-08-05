@@ -19,10 +19,6 @@ interface FutureVideoStepProps {
   onBackStep?: () => void;
 }
 
-const MAX_SIZE_MB = Math.round(
-  DEFAULT_VIDEO_CONFIG.maxSizeBytes / (1024 * 1024),
-);
-
 export function FutureVideoStep({
   letterId,
   initialVideoUrl = null,
