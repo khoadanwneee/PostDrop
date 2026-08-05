@@ -365,9 +365,15 @@ export class LettersService {
         'A fulfillment mode and address are required for physical delivery',
       );
     }
-    if (!letter.delivery_at || new Date(letter.delivery_at).getTime() <= Date.now()) {
-      throw new BadRequestException('Expected arrival time must be in the future');
+    if (!letter.delivery_at) {
+      throw new BadRequestException('An expected arrival time is required');
     }
+    // DEMO: the "must be in the future" requirement is intentionally
+    // dropped here (and mirrored in the seal_letter_with_attachments RPC,
+    // see supabase/migrations/202608051013_demo_immediate_digital_release.sql)
+    // so digital letters can be sealed and reveal-emailed immediately for
+    // demo recording, regardless of the delivery date picked. Restore the
+    // `<= Date.now()` check before shipping the real scheduled delivery.
   }
 
   private toDatabaseInput(dto: CreateLetterDto | UpdateLetterDto) {

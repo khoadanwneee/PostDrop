@@ -18,8 +18,8 @@ export class CreateLetterAttachmentDto {
   @MaxLength(120)
   clientId?: string;
 
-  @IsEnum(['decoration', 'inline', 'attachment'])
-  role: 'decoration' | 'inline' | 'attachment';
+  @IsEnum(['decoration', 'inline', 'attachment', 'future_video'])
+  role: 'decoration' | 'inline' | 'attachment' | 'future_video';
 
   @IsOptional()
   @IsNumber()

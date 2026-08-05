@@ -5,7 +5,7 @@ import { createHash, createHmac, randomBytes } from 'crypto';
 @Injectable()
 export class RevealTokenService {
   static readonly CAPABILITY_LIFETIME_DAYS = 30;
-  static readonly SESSION_LIFETIME_MINUTES = 15;
+  static readonly SESSION_LIFETIME_MINUTES = 30;
 
   private readonly secret: Buffer;
   private readonly publicAppUrl: string;

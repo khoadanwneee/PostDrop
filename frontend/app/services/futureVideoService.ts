@@ -1,3 +1,4 @@
+import { apiFetch, readErrorMessage } from '../lib/api-client';
 import type { FutureVideoData, UploadedVideo } from '../types/future-video';
 
 export const MAX_FUTURE_VIDEO_SIZE_BYTES = 100 * 1024 * 1024;
@@ -15,23 +16,6 @@ export function validateFutureVideoFile(
 }
 
 /**
- * Generates a secure, unique storage path for future videos.
- * Format: future-videos/{userId}/{letterId}/{timestamp}-{randomId}.{extension}
- */
-export function generateStoragePath(
-  userId: string,
-  letterId: string,
-  extension: string,
-): string {
-  const safeUserId = userId.replace(/[^a-zA-Z0-9_-]/g, '') || 'anonymous';
-  const safeLetterId = letterId.replace(/[^a-zA-Z0-9_-]/g, '') || 'draft';
-  const timestamp = Date.now();
-  const randomId = Math.random().toString(36).substring(2, 9);
-  const ext = extension.replace(/^\./, '') || 'webm';
-  return `future-videos/${safeUserId}/${safeLetterId}/${timestamp}-${randomId}.${ext}`;
-}
-
-/**
  * Derives file extension from MIME type.
  */
 export function getExtensionFromMimeType(mimeType: string): string {
@@ -40,48 +24,123 @@ export function getExtensionFromMimeType(mimeType: string): string {
   return 'webm';
 }
 
+interface StartUploadResponse {
+  asset: { id: string };
+  upload: { signedUrl: string };
+}
+
+interface AssetResponse {
+  id: string;
+  url?: string;
+}
+
+interface AttachmentResponse {
+  id: string;
+  createdAt: string;
+}
+
 /**
- * Service to handle uploading future videos to storage backend (or in-memory Blob URL).
+ * Uploads the compose-time "future video" to the real backend: a presigned
+ * Supabase Storage upload (POST /api/assets/uploads -> PUT signed URL ->
+ * POST /api/assets/:id/complete), then attaches the ready asset to the
+ * letter as a `future_video` attachment (POST /api/letters/:id/attachments).
+ * This attachment rides the existing seal/reveal pipeline unchanged, so the
+ * video only becomes fetchable once the letter is revealed.
  */
 export async function uploadFutureVideo(
   file: Blob | File,
-  userId = 'user_guest',
-  letterId = 'letter_draft',
+  letterId: string,
   durationSeconds?: number,
 ): Promise<UploadedVideo> {
-  // Validate non-empty file
   if (!file || file.size === 0) {
     throw new Error('Tệp video không hợp lệ hoặc có dung lượng 0 byte.');
   }
+  if (!letterId) {
+    throw new Error('Chưa chuẩn bị xong bản nháp lá thư. Vui lòng thử lại.');
+  }
 
-  const mimeType = file.type || 'video/webm';
+  // Strip codec parameters (e.g. "video/webm;codecs=vp8,opus") — the backend
+  // only recognizes the bare MIME type.
+  const mimeType = (file.type || 'video/webm').split(';')[0];
   const ext = getExtensionFromMimeType(mimeType);
-  const storagePath = generateStoragePath(userId, letterId, ext);
-  const id = `vid_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
   const fileName =
-    file instanceof File
-      ? file.name
-      : `recorded-video-${Date.now()}.${ext}`;
+    file instanceof File ? file.name : `future-video-${Date.now()}.${ext}`;
 
-  // Read Object URL for preview without persisting to localStorage / sessionStorage
-  const objectUrl = URL.createObjectURL(file);
+  const startResponse = await apiFetch('/api/assets/uploads', {
+    method: 'POST',
+    body: JSON.stringify({
+      kind: 'video',
+      mimeType,
+      byteSize: file.size,
+      fileName,
+    }),
+  });
+  if (!startResponse.ok) {
+    throw new Error(
+      await readErrorMessage(startResponse, 'Không thể chuẩn bị tải video lên.'),
+    );
+  }
+  const { asset, upload } = (await startResponse.json()) as StartUploadResponse;
 
-  const result: UploadedVideo = {
-    id,
-    url: objectUrl,
-    storagePath,
+  const putResponse = await fetch(upload.signedUrl, {
+    method: 'PUT',
+    headers: { 'Content-Type': mimeType, 'x-upsert': 'false' },
+    body: file,
+  });
+  if (!putResponse.ok) {
+    throw new Error('Tải video lên bộ nhớ lưu trữ thất bại. Vui lòng thử lại.');
+  }
+
+  const completeResponse = await apiFetch(`/api/assets/${asset.id}/complete`, {
+    method: 'POST',
+    body: JSON.stringify({
+      durationMs:
+        durationSeconds !== undefined
+          ? Math.round(durationSeconds * 1000)
+          : undefined,
+    }),
+  });
+  if (!completeResponse.ok) {
+    throw new Error(
+      await readErrorMessage(
+        completeResponse,
+        'Không thể hoàn tất tải video lên.',
+      ),
+    );
+  }
+  const readyAsset = (await completeResponse.json()) as AssetResponse;
+
+  const attachResponse = await apiFetch(`/api/letters/${letterId}/attachments`, {
+    method: 'POST',
+    body: JSON.stringify({ assetId: readyAsset.id, role: 'future_video' }),
+  });
+  if (!attachResponse.ok) {
+    throw new Error(
+      await readErrorMessage(
+        attachResponse,
+        'Không thể đính kèm video vào lá thư.',
+      ),
+    );
+  }
+  const attachment = (await attachResponse.json()) as AttachmentResponse;
+
+  return {
+    id: attachment.id,
+    url: readyAsset.url ?? '',
+    storagePath: readyAsset.id,
     fileName,
     mimeType,
     size: file.size,
     duration: durationSeconds,
-    createdAt: new Date().toISOString(),
+    createdAt: attachment.createdAt,
   };
-
-  return result;
 }
 
 /**
  * Constructs metadata binding letter and video for future unlocking.
+ * Kept for callers that still want a client-side summary of the bound
+ * video; the durable record now lives server-side as a `letter_attachments`
+ * row (see `uploadFutureVideo`).
  */
 export function bindVideoToLetter(
   video: UploadedVideo,

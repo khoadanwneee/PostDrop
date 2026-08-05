@@ -1441,6 +1441,7 @@ function renderBuilder(step = 1) {
       : `BƯỚC ${step > 4 ? step - 1 : step} / 5 — ${steps[step - 1].toUpperCase()}`;
   app.innerHTML = `<div class="app-page">${appHeader()}<main id="main-content" class="container builder-wrap"><div class="builder-head"><div><span class="eyebrow">${stepEyebrow}</span><h1>${stepTitle(step)}</h1><p>${stepDescription(step)}</p></div><span class="save-state">Đã lưu bản nháp</span></div>${stepper(step)}<div id="builder-content">${renderStep(step)}</div></main></div>`;
   bindBuilder(step);
+  if (step === 4) ensureVideoStepLetterId();
 }
 
 function stepTitle(step) {
@@ -1502,6 +1503,59 @@ function renderDesignStep() {
 
 function renderVideoStep() {
   return `<div id="future-video-root" data-draft-id="${escapeHtml(draft.draftId)}" aria-live="polite"></div>`;
+}
+
+// Creates (or reuses) a real backend letter so the future-video step has a
+// genuine letterId to upload against, instead of waiting until the final
+// wizard step. Letters created here are still plain drafts — LettersService
+// only enforces completeness at seal() time, so a partially-filled draft is
+// a valid row. Reuses the same localStorage key submitLetter() already uses
+// so the two code paths PATCH the same row rather than creating duplicates.
+async function ensureDraftLetter() {
+  const existingId = localStorage.getItem('postdrop-pending-letter-id');
+  if (existingId) return existingId;
+
+  await ensureAuthToken(draft.recipientEmail, draft.recipientName);
+  const payload = {
+    title: draft.title || undefined,
+    content: draft.content || undefined,
+    recipientName: draft.recipientName || undefined,
+    recipientEmail: draft.recipientEmail || undefined,
+    letterType: draft.letterType === 'handwritten' ? 'handwritten' : 'online',
+    paper: labelize(draft.paper),
+    font: draft.font,
+    envelope: labelize(draft.envelope),
+  };
+  const response = await apiFetch('/api/letters', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+  if (!response.ok) {
+    const errJson = await response.json().catch(() => ({}));
+    throw new Error(errJson.message || 'Không thể chuẩn bị bản nháp lá thư');
+  }
+  const created = await response.json();
+  localStorage.setItem('postdrop-pending-letter-id', created.id);
+  return created.id;
+}
+
+// Runs once the video step is on screen: resolves a real letterId and hands
+// it to the mounted React FutureVideoStep via a DOM attribute + event,
+// without forcing a full re-render of the wizard.
+function ensureVideoStepLetterId() {
+  ensureDraftLetter()
+    .then((letterId) => {
+      document
+        .querySelector('#future-video-root')
+        ?.setAttribute('data-letter-id', letterId);
+      window.dispatchEvent(
+        new CustomEvent('postdrop-letter-id-ready', { detail: { letterId } }),
+      );
+    })
+    .catch((error) => {
+      console.warn('ensureDraftLetter failed', error);
+      toast('Chưa thể chuẩn bị bước quay video. Vui lòng thử lại.', 'error');
+    });
 }
 
 function renderStep(step) {

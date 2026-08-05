@@ -49,7 +49,10 @@ export interface VideoConfig {
 
 export const DEFAULT_VIDEO_CONFIG: VideoConfig = {
   maxDurationSeconds: 180, // 3 minutes
-  maxSizeBytes: 100 * 1024 * 1024, // 100 MB
+  // Matches the backend's video asset ceiling (MAX_ASSET_BYTES in
+  // backend/src/assets/asset-policy.ts and the Storage bucket's
+  // file_size_limit) — keep these in sync.
+  maxSizeBytes: 50 * 1024 * 1024, // 50 MB
   allowedMimeTypes: [
     'video/webm',
     'video/mp4',

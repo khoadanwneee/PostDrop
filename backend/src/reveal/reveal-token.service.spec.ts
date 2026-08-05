@@ -37,7 +37,7 @@ describe('RevealTokenService', () => {
     const service = createService();
     expect(service.createSessionToken()).not.toBe(service.createSessionToken());
     const now = new Date('2026-07-29T00:00:00.000Z');
-    expect(service.sessionExpiresAt(now)).toBe('2026-07-29T00:15:00.000Z');
+    expect(service.sessionExpiresAt(now)).toBe('2026-07-29T00:30:00.000Z');
     expect(service.capabilityExpiresAt(now)).toBe('2026-08-28T00:00:00.000Z');
   });
 });

@@ -11,7 +11,7 @@ import { CameraRecorder } from './CameraRecorder';
 import { VideoPreview } from './VideoPreview';
 
 interface FutureVideoStepProps {
-  userId?: string;
+  /** Real backend letter UUID. Undefined/empty while the draft is still being prepared. */
   letterId?: string;
   initialVideoUrl?: string | null;
   onVideoConfirmed: (videoData: UploadedVideo) => void;
@@ -19,9 +19,12 @@ interface FutureVideoStepProps {
   onBackStep?: () => void;
 }
 
+const MAX_SIZE_MB = Math.round(
+  DEFAULT_VIDEO_CONFIG.maxSizeBytes / (1024 * 1024),
+);
+
 export function FutureVideoStep({
-  userId = 'user_guest',
-  letterId = 'letter_draft',
+  letterId,
   initialVideoUrl = null,
   onVideoConfirmed,
   onSkipStep,
@@ -101,11 +104,14 @@ export function FutureVideoStep({
       alert('Chưa có video để sử dụng.');
       return;
     }
+    if (!letterId) {
+      alert('Đang chuẩn bị bản nháp lá thư, vui lòng thử lại sau vài giây.');
+      return;
+    }
 
     if (targetPayload) {
       const result = await uploadVideoFile(
         targetPayload,
-        userId,
         letterId,
         recordingSeconds,
       );
@@ -118,7 +124,7 @@ export function FutureVideoStep({
       onVideoConfirmed({
         id: `existing_${Date.now()}`,
         url: initialVideoUrl,
-        storagePath: `future-videos/${userId}/${letterId}/existing.webm`,
+        storagePath: `future-videos/${letterId}/existing.webm`,
         fileName: 'existing-video.webm',
         mimeType: 'video/webm',
         size: 1,

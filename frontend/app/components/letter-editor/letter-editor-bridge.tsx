@@ -73,6 +73,9 @@ export function LetterEditorBridge() {
     video: null,
   });
   const [bridgeDraft, setBridgeDraft] = useState<BridgeDraft | null>(null);
+  const [videoLetterId, setVideoLetterId] = useState<string | undefined>(
+    undefined,
+  );
 
   useEffect(() => {
     let disposed = false;
@@ -106,6 +109,9 @@ export function LetterEditorBridge() {
       hostsRef.current = nextHosts;
       setHosts(nextHosts);
       if (nextHosts.editor || nextHosts.orientation || nextHosts.video) hydrate();
+      if (nextHosts.video) {
+        setVideoLetterId(nextHosts.video.dataset.letterId || undefined);
+      }
     };
 
     const handleDraftReset = () => {
@@ -114,15 +120,28 @@ export function LetterEditorBridge() {
       });
     };
 
+    // app.js resolves the real backend letterId asynchronously (see
+    // ensureDraftLetter/ensureVideoStepLetterId) and announces it once ready,
+    // since it lands after the host element already mounted.
+    const handleLetterIdReady = (event: Event) => {
+      const detail = (event as CustomEvent<{ letterId?: string }>).detail;
+      if (detail?.letterId) setVideoLetterId(detail.letterId);
+    };
+
     findHosts();
     const observer = new MutationObserver(findHosts);
     observer.observe(document.body, { childList: true, subtree: true });
     window.addEventListener('postdrop-draft-reset', handleDraftReset);
+    window.addEventListener('postdrop-letter-id-ready', handleLetterIdReady);
 
     return () => {
       disposed = true;
       observer.disconnect();
       window.removeEventListener('postdrop-draft-reset', handleDraftReset);
+      window.removeEventListener(
+        'postdrop-letter-id-ready',
+        handleLetterIdReady,
+      );
     };
   }, []);
 
@@ -242,8 +261,7 @@ export function LetterEditorBridge() {
           <link rel={'stylesheet'} href={'/letter-editor.css'} />
           <FutureVideoStep
             key={`future-video-${bridgeDraft.draftId ?? 'anonymous'}-${bridgeDraft.mountRevision}`}
-            userId={bridgeDraft.draftId ?? 'user_guest'}
-            letterId={bridgeDraft.draftId ?? 'letter_draft'}
+            letterId={videoLetterId}
             onVideoConfirmed={handleVideoConfirmed}
             onSkipStep={handleSkipVideo}
             onBackStep={handleBackVideo}
