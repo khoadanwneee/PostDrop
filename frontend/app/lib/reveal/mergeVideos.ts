@@ -71,17 +71,31 @@ export async function mergeVideos(
   );
 
   try {
-    await ffmpeg.exec([
+    // Both clips are letterboxed onto an identical 1280x720 canvas before
+    // concatenation. concat requires every input to share the exact same
+    // frame size — scaling by width alone (scale=1280:-2) leaves differently
+    // *oriented* clips (e.g. a portrait phone recording next to a landscape
+    // webcam one) at different heights, which makes the concat filter fail.
+    // exec() doesn't throw on that failure (see the exitCode check below),
+    // it just leaves output.mp4 empty/corrupt, so the merge silently
+    // "succeeded" into an unplayable black video.
+    const exitCode = await ffmpeg.exec([
       '-i', 'original.input',
       '-i', 'reply.input',
       '-filter_complex',
-      '[0:v]scale=1280:-2,setsar=1[v0];[1:v]scale=1280:-2,setsar=1[v1];[v0][0:a][v1][1:a]concat=n=2:v=1:a=1[v][a]',
+      '[0:v]scale=1280:720:force_original_aspect_ratio=decrease,pad=1280:720:(ow-iw)/2:(oh-ih)/2,setsar=1[v0];' +
+        '[1:v]scale=1280:720:force_original_aspect_ratio=decrease,pad=1280:720:(ow-iw)/2:(oh-ih)/2,setsar=1[v1];' +
+        '[v0][0:a][v1][1:a]concat=n=2:v=1:a=1[v][a]',
       '-map', '[v]',
       '-map', '[a]',
       '-c:v', 'libx264',
+      '-pix_fmt', 'yuv420p',
       '-c:a', 'aac',
       'output.mp4',
     ]);
+    if (exitCode !== 0) {
+      throw new Error(`Ghép video thất bại (mã lỗi ${exitCode}).`);
+    }
 
     const data = await ffmpeg.readFile('output.mp4');
     return new Blob([data as unknown as BlobPart], { type: 'video/mp4' });
