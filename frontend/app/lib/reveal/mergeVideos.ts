@@ -89,6 +89,11 @@ export async function mergeVideos(
       '-map', '[v]',
       '-map', '[a]',
       '-c:v', 'libx264',
+      // ffmpeg.wasm runs single-threaded in the browser, so the default
+      // "medium" x264 preset is painfully slow for anything beyond a few
+      // seconds of footage. "ultrafast" trades a larger output file for a
+      // large cut in encode time — worth it for a client-side demo merge.
+      '-preset', 'ultrafast',
       '-pix_fmt', 'yuv420p',
       '-c:a', 'aac',
       'output.mp4',
