@@ -252,7 +252,10 @@ export class PaymentsService {
     if (this.provider.name !== 'mock') {
       throw new ForbiddenException('Mock payment controls are disabled');
     }
-    if (this.config.get<string>('NODE_ENV') === 'production') {
+    const isProduction = this.config.get<string>('NODE_ENV') === 'production';
+    const allowMockInProduction =
+      this.config.get<string>('ALLOW_MOCK_PAYMENTS_IN_PRODUCTION') === 'true';
+    if (isProduction && !allowMockInProduction) {
       throw new ForbiddenException(
         'Mock payments cannot run in production',
       );
