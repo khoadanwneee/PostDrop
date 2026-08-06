@@ -1131,6 +1131,10 @@ function resetDraft(letterType = "online") {
   clearTimeout(saveTimer);
   localStorage.removeItem("postdrop-draft");
   localStorage.removeItem(EDITOR_DRAFT_STORAGE_KEY);
+  // A pending backend letter belongs to the draft being reset. Keeping its
+  // ID makes a new composition attach uploads to an old (and possibly sealed
+  // or differently owned) letter.
+  localStorage.removeItem("postdrop-pending-letter-id");
   draft = {
     ...defaultDraft,
     letterType,
@@ -1512,10 +1516,28 @@ function renderVideoStep() {
 // a valid row. Reuses the same localStorage key submitLetter() already uses
 // so the two code paths PATCH the same row rather than creating duplicates.
 async function ensureDraftLetter() {
-  const existingId = localStorage.getItem('postdrop-pending-letter-id');
-  if (existingId) return existingId;
-
   await ensureAuthToken(draft.recipientEmail, draft.recipientName);
+  const existingId = localStorage.getItem('postdrop-pending-letter-id');
+  if (existingId) {
+    const existingResponse = await apiFetch(
+      `/api/letters/${encodeURIComponent(existingId)}`,
+    );
+    if (existingResponse.ok) {
+      const existingLetter = await existingResponse.json();
+      if (existingLetter.contentStatus === 'draft') return existingId;
+    } else if (
+      existingResponse.status !== 403 &&
+      existingResponse.status !== 404
+    ) {
+      const errJson = await existingResponse.json().catch(() => ({}));
+      throw new Error(
+        errJson.message || 'Không thể kiểm tra bản nháp lá thư hiện tại',
+      );
+    }
+
+    localStorage.removeItem('postdrop-pending-letter-id');
+  }
+
   const payload = {
     title: draft.title || undefined,
     content: draft.content || undefined,
