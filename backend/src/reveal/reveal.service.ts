@@ -46,6 +46,7 @@ interface SealedAttachmentRow {
 
 interface AttachmentPlacementRow {
   id: string;
+  client_id: string | null;
   role: 'decoration' | 'inline' | 'attachment' | 'future_video';
   x_percent: number | null;
   y_percent: number | null;
@@ -190,7 +191,9 @@ export class RevealService {
 
     const { data: placementData, error: placementError } = await supabase
       .from('letter_attachments')
-      .select('id,role,x_percent,y_percent,scale,rotation,z_index,alt_text')
+      .select(
+        'id,client_id,role,x_percent,y_percent,scale,rotation,z_index,alt_text',
+      )
       .in(
         'id',
         sealed.map((item) => item.letter_attachment_id),
@@ -211,6 +214,7 @@ export class RevealService {
       }
       return {
         id: item.id,
+        clientId: placement.client_id ?? undefined,
         role: placement.role,
         mimeType: item.original_mime_type,
         byteSize: Number(item.original_byte_size),

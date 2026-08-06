@@ -78,6 +78,33 @@
   transform: none;
 }
 
+.reveal-letter-card-design {
+  width: min(100%, 860px);
+  padding: 0;
+  background: transparent !important;
+  border: 0;
+  box-shadow: none;
+  overflow: visible;
+}
+
+.reveal-design-viewport {
+  width: 100%;
+  min-width: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.reveal-design-frame {
+  position: relative;
+  margin-inline: auto;
+}
+
+.reveal-design-scale {
+  position: absolute;
+  inset: 0 auto auto 0;
+  transform-origin: top left;
+}
+
 .reveal-letter-title {
   margin: 6px 0 18px;
   font-size: clamp(1.5rem, 4vw, 2.1rem);
@@ -139,6 +166,15 @@
   width: 100%;
   max-width: 480px;
   border-radius: 12px;
+}
+
+.reveal-original-video,
+.reveal-merged-video {
+  width: 100%;
+  max-width: 560px;
+  border-radius: 12px;
+  background: #171313;
+  box-shadow: 0 14px 34px rgba(43, 37, 35, 0.18);
 }
 
 @media (prefers-reduced-motion: reduce) {

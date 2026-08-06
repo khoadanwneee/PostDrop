@@ -3,8 +3,11 @@
 // capability token in the URL fragment and the short-lived session token it
 // exchanges for (see backend/src/reveal/reveal.service.ts).
 
+import type { LetterDesignSnapshot } from '@/app/types/letter-editor';
+
 export interface RevealAttachment {
   id: string;
+  clientId?: string;
   role: 'decoration' | 'inline' | 'attachment' | 'future_video';
   mimeType: string;
   byteSize: number;
@@ -26,6 +29,7 @@ export interface RevealPresentation {
   envelope: string;
   note?: string;
   content: string;
+  designSnapshot?: LetterDesignSnapshot | null;
   attachments: RevealAttachment[];
 }
 

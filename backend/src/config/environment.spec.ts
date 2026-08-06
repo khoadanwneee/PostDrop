@@ -60,6 +60,21 @@ describe('validateEnvironment', () => {
     expect(() =>
       validateEnvironment({ ...valid, REDIS_TLS: 'sometimes' }),
     ).toThrow('REDIS_TLS must be true or false');
+    expect(() =>
+      validateEnvironment({ ...valid, REDIS_URL: 'https://redis.example.com' }),
+    ).toThrow('REDIS_URL must use the redis:// or rediss:// protocol');
+  });
+
+  it('accepts a hosted Redis URL', () => {
+    expect(
+      validateEnvironment({
+        ...valid,
+        REDIS_URL: 'rediss://user:password@redis.example.com:6380/0',
+      }),
+    ).toEqual({
+      ...valid,
+      REDIS_URL: 'rediss://user:password@redis.example.com:6380/0',
+    });
   });
 
   it('accepts complete Gmail OAuth configuration', () => {

@@ -1186,6 +1186,13 @@ window.addEventListener("postdrop-editor-change", (event) => {
     if (next.selectedThemeId) draft.theme = next.selectedThemeId;
   }
   if (Array.isArray(next.userElements)) draft.userElements = next.userElements;
+  if (
+    next.designSnapshot &&
+    typeof next.designSnapshot === "object" &&
+    next.designSnapshot.schemaVersion === 1
+  ) {
+    draft.designSnapshot = next.designSnapshot;
+  }
   persistDraft();
 });
 
@@ -2569,12 +2576,16 @@ async function loadCurrentAuthUser({ force = false } = {}) {
   if (!getAuthToken()) return null;
   if (currentAuthUser && !force) return currentAuthUser;
   try {
-    const response = await apiFetch("/api/auth/me");
+    let response = await apiFetch("/api/auth/me");
+    if (response.status === 401 && (await refreshAuthToken())) {
+      response = await apiFetch("/api/auth/me");
+    }
     if (!response.ok) throw new Error("Không thể tải hồ sơ");
     currentAuthUser = await response.json();
     return currentAuthUser;
   } catch (error) {
     console.warn("Could not load the current profile:", error);
+    if (!getAuthToken()) return null;
     return authUserFromToken();
   }
 }
@@ -2682,7 +2693,22 @@ async function renderGuestOnly(renderPage, expectedHash) {
 
 async function ensureAuthToken(email, fullName) {
   let token = getAuthToken();
-  if (token) return token;
+  if (token) {
+    try {
+      const currentResponse = await apiFetch("/api/auth/me");
+      if (currentResponse.ok) return token;
+      if (currentResponse.status !== 401) {
+        throw new Error("Không thể kiểm tra phiên đăng nhập");
+      }
+      const refreshedToken = await refreshAuthToken();
+      if (refreshedToken) return refreshedToken;
+    } catch (error) {
+      console.warn("Could not refresh the current session:", error);
+    }
+
+    setAuthToken(null);
+    throw new Error("Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.");
+  }
   const guestEmail =
     email ||
     `guest_${Date.now()}_${Math.floor(Math.random() * 10000)}@postdrop.local`;
@@ -2708,7 +2734,7 @@ async function ensureAuthToken(email, fullName) {
   } catch (e) {
     console.warn("Auto auth fallback error:", e);
   }
-  return token;
+  throw new Error("Không thể tạo phiên gửi thư. Vui lòng đăng nhập lại.");
 }
 
 async function apiFetch(url, options = {}) {
@@ -2719,6 +2745,153 @@ async function apiFetch(url, options = {}) {
   const token = getAuthToken();
   if (token) headers["Authorization"] = `Bearer ${token}`;
   return fetch(url, { ...options, headers, credentials: "include" });
+}
+
+async function refreshAuthToken() {
+  try {
+    const response = await fetch("/api/auth/refresh", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      credentials: "include",
+      body: "{}"
+    });
+    if (!response.ok) {
+      setAuthToken(null);
+      return "";
+    }
+    const session = await response.json();
+    if (!session.accessToken) {
+      setAuthToken(null);
+      return "";
+    }
+    setAuthToken(session.accessToken);
+    return session.accessToken;
+  } catch (error) {
+    console.warn("Could not refresh the current session:", error);
+    setAuthToken(null);
+    return "";
+  }
+}
+
+function designAttachmentClientId(elementId) {
+  return `design:${String(elementId)}`.slice(0, 120);
+}
+
+function isEmbeddedDesignImage(element) {
+  return (
+    element?.type === "image" &&
+    typeof element.src === "string" &&
+    /^data:image\/(?:avif|gif|jpe?g|png|webp);base64,/i.test(element.src)
+  );
+}
+
+function preparePresentationSnapshot(snapshot) {
+  if (!snapshot || snapshot.schemaVersion !== 1) return undefined;
+  const prepared = JSON.parse(JSON.stringify(snapshot));
+  prepared.elements = (prepared.elements || []).map((element) => {
+    if (!isEmbeddedDesignImage(element)) return element;
+    const next = { ...element };
+    delete next.src;
+    next.attachmentClientId = designAttachmentClientId(next.id);
+    return next;
+  });
+  return prepared;
+}
+
+async function syncDesignImageAttachments(letterId, snapshot) {
+  const desired = new Map(
+    (snapshot?.elements || [])
+      .filter(isEmbeddedDesignImage)
+      .map((element) => [designAttachmentClientId(element.id), element]),
+  );
+  const listResponse = await apiFetch(`/api/letters/${letterId}/attachments`);
+  if (!listResponse.ok) {
+    const body = await listResponse.json().catch(() => ({}));
+    throw new Error(body.message || "Không thể kiểm tra ảnh thiết kế");
+  }
+  const existing = await listResponse.json();
+  const existingDesign = new Map(
+    existing
+      .filter(
+        (attachment) =>
+          attachment.role === "decoration" &&
+          typeof attachment.clientId === "string" &&
+          attachment.clientId.startsWith("design:"),
+      )
+      .map((attachment) => [attachment.clientId, attachment]),
+  );
+
+  for (const [clientId, attachment] of existingDesign) {
+    if (desired.has(clientId)) continue;
+    const response = await apiFetch(
+      `/api/letters/${letterId}/attachments/${attachment.id}`,
+      { method: "DELETE" },
+    );
+    if (!response.ok) throw new Error("Không thể đồng bộ ảnh thiết kế đã xóa");
+    if (attachment.assetId) {
+      const assetResponse = await apiFetch(`/api/assets/${attachment.assetId}`, {
+        method: "DELETE"
+      });
+      if (!assetResponse.ok) {
+        throw new Error("Không thể dọn ảnh thiết kế đã xóa");
+      }
+    }
+  }
+
+  for (const [clientId, element] of desired) {
+    if (existingDesign.has(clientId)) continue;
+    const blob = await fetch(element.src).then((response) => response.blob());
+    const extension = blob.type.split("/")[1]?.replace("jpeg", "jpg") || "png";
+    const startResponse = await apiFetch("/api/assets/uploads", {
+      method: "POST",
+      body: JSON.stringify({
+        kind: "image",
+        mimeType: blob.type,
+        byteSize: blob.size,
+        fileName: `design-${element.id}.${extension}`.slice(0, 255),
+        displayName: String(element.alt || "Ảnh thiết kế").slice(0, 120),
+      }),
+    });
+    if (!startResponse.ok) {
+      const body = await startResponse.json().catch(() => ({}));
+      throw new Error(body.message || "Không thể chuẩn bị ảnh thiết kế");
+    }
+    const upload = await startResponse.json();
+    const putResponse = await fetch(upload.upload.signedUrl, {
+      method: "PUT",
+      headers: { "Content-Type": blob.type, "x-upsert": "false" },
+      body: blob,
+    });
+    if (!putResponse.ok) throw new Error("Không thể tải ảnh thiết kế");
+    const completeResponse = await apiFetch(
+      `/api/assets/${upload.asset.id}/complete`,
+      { method: "POST", body: "{}" },
+    );
+    if (!completeResponse.ok) {
+      throw new Error("Không thể hoàn tất ảnh thiết kế");
+    }
+    const attachResponse = await apiFetch(
+      `/api/letters/${letterId}/attachments`,
+      {
+        method: "POST",
+        body: JSON.stringify({
+          assetId: upload.asset.id,
+          clientId,
+          role: "decoration",
+          x: Math.min(100, Math.max(0, Number(element.x) * 100)),
+          y: Math.min(100, Math.max(0, Number(element.y) * 100)),
+          scale: 1,
+          rotation: Number(element.rotation) || 0,
+          zIndex: Math.min(1000, Math.max(0, Number(element.zIndex) || 0)),
+          altText: String(element.alt || "").slice(0, 500),
+        }),
+      },
+    );
+    if (!attachResponse.ok) {
+      const body = await attachResponse.json().catch(() => ({}));
+      throw new Error(body.message || "Không thể gắn ảnh vào thiết kế");
+    }
+  }
 }
 
 async function submitLetter() {
@@ -2758,7 +2931,8 @@ async function submitLetter() {
       paper: labelize(draft.paper),
       font: draft.font,
       envelope: labelize(draft.envelope),
-      note: deliveryMethod === "physical" ? draft.note || undefined : undefined
+      note: deliveryMethod === "physical" ? draft.note || undefined : undefined,
+      presentationSnapshot: preparePresentationSnapshot(draft.designSnapshot)
     };
     const pendingLetterId = localStorage.getItem("postdrop-pending-letter-id");
     let createdResponse = pendingLetterId
@@ -2780,6 +2954,7 @@ async function submitLetter() {
     }
     const created = await createdResponse.json();
     localStorage.setItem("postdrop-pending-letter-id", created.id);
+    await syncDesignImageAttachments(created.id, draft.designSnapshot);
     const checkoutResponse = await apiFetch("/api/payments/checkout", {
       method: "POST",
       body: JSON.stringify({ letterId: created.id })

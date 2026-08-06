@@ -3,6 +3,7 @@ import {
   IsEmail,
   IsIn,
   IsOptional,
+  IsObject,
   IsString,
   MaxLength,
   ValidateIf,
@@ -74,4 +75,8 @@ export class CreateLetterDto {
   @IsOptional()
   @IsString()
   note?: string;
+
+  @IsOptional()
+  @IsObject()
+  presentationSnapshot?: Record<string, unknown>;
 }

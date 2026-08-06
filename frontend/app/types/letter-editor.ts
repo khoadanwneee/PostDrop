@@ -63,6 +63,8 @@ export interface ThemeElement {
   type: ThemeElementType;
   kind: DecorationKind;
   src?: string;
+  /** Durable backend attachment reference used instead of browser-only data URLs. */
+  attachmentClientId?: string;
   text?: string;
   alt?: string;
   shape?: 'rect' | 'circle';
@@ -85,6 +87,17 @@ export interface ThemeElement {
   locked: boolean;
   source: ElementSource;
   initial: ElementInitialState;
+}
+
+export interface LetterDesignSnapshot {
+  schemaVersion: 1;
+  paperOrientation: PaperOrientation;
+  selectedThemeId: string;
+  paper: string;
+  canvas: LetterTheme['canvas'];
+  typography: LetterTheme['typography'];
+  safeArea: SafeArea;
+  elements: ThemeElement[];
 }
 
 export interface LetterTheme {

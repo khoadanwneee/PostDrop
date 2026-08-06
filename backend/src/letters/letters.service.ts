@@ -11,6 +11,7 @@ import { EncryptionService } from '../encryption/encryption.service';
 import { SupabaseService } from '../supabase/supabase.service';
 import { CreateLetterDto } from './dto/create-letter.dto';
 import { UpdateLetterDto } from './dto/update-letter.dto';
+import { sanitizePresentationSnapshot } from './presentation-snapshot';
 
 const PUBLIC_LETTER_COLUMNS = [
   'id',
@@ -129,6 +130,7 @@ export class LettersService {
         'deliveryMethod',
         'physicalFulfillmentMode',
         'letterType',
+        'presentationSnapshot',
       ];
       const hasContentChanges = contentFields.some(
         (field) => (dto as Record<string, unknown>)[field] !== undefined,
@@ -394,6 +396,9 @@ export class LettersService {
       font: dto.font,
       envelope: dto.envelope,
       note: dto.note,
+      draft_presentation: sanitizePresentationSnapshot(
+        dto.presentationSnapshot,
+      ),
     };
   }
 

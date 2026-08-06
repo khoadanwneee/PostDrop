@@ -12,6 +12,7 @@ import { restoreEditorState } from '@/app/lib/letter-editor/persistence';
 import type { LetterFont, PaperOrientation } from '@/app/types/letter-editor';
 import {
   LetterEditor,
+  type LetterEditorChange,
   type LetterEditorInitialDraft,
 } from './letter-editor';
 import { PaperOrientationSelector } from './paper-orientation-selector';
@@ -146,7 +147,7 @@ export function LetterEditorBridge() {
   }, []);
 
   const handleChange = useCallback(
-    (draft: LetterEditorInitialDraft) => {
+    (draft: LetterEditorChange) => {
       window.dispatchEvent(
         new CustomEvent('postdrop-editor-change', {
           detail: withDraftId(draft, bridgeDraft?.draftId),
@@ -279,4 +280,3 @@ export function LetterEditorBridge() {
     </>
   );
 }
-

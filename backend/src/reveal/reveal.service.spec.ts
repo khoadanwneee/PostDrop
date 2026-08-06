@@ -117,6 +117,7 @@ describe('RevealService', () => {
         data: [
           {
             id: attachmentId,
+            client_id: 'future-video',
             role: 'future_video',
             x_percent: null,
             y_percent: null,
@@ -160,6 +161,7 @@ describe('RevealService', () => {
         attachments: [
           {
             id: attachmentId,
+            clientId: 'future-video',
             role: 'future_video',
             mimeType: 'video/webm',
             byteSize: 4096,

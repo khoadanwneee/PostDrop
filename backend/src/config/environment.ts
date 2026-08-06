@@ -13,6 +13,7 @@ interface Environment {
   GMAIL_SENDER_EMAIL?: string;
   GMAIL_SENDER_NAME?: string;
   GMAIL_OAUTH_PORT?: string;
+  REDIS_URL?: string;
   REDIS_HOST?: string;
   REDIS_PORT?: string;
   REDIS_USERNAME?: string;
@@ -97,6 +98,21 @@ export function validateEnvironment(config: Record<string, unknown>): Environmen
     !['true', 'false'].includes(String(config.REDIS_TLS))
   ) {
     throw new Error('REDIS_TLS must be true or false');
+  }
+
+  if (typeof config.REDIS_URL === 'string' && config.REDIS_URL.length > 0) {
+    let redisUrl: URL;
+    try {
+      redisUrl = new URL(config.REDIS_URL);
+    } catch {
+      throw new Error('REDIS_URL must be a valid Redis URL');
+    }
+    if (!['redis:', 'rediss:'].includes(redisUrl.protocol) || !redisUrl.hostname) {
+      throw new Error('REDIS_URL must use the redis:// or rediss:// protocol');
+    }
+    if (redisUrl.pathname && !/^\/\d*$/.test(redisUrl.pathname)) {
+      throw new Error('REDIS_URL database path must be a non-negative integer');
+    }
   }
 
   const gmailKeys = [

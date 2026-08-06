@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { BullModule } from '@nestjs/bullmq';
 import { ConfigModule, ConfigService } from '@nestjs/config';
+import type { ConnectionOptions } from 'bullmq';
 import {
   DELIVERY_QUEUE,
   DOCUMENTS_QUEUE,
@@ -13,20 +14,39 @@ function optionalValue(value: string | undefined): string | undefined {
   return trimmed ? trimmed : undefined;
 }
 
+export function redisConnection(config: ConfigService): ConnectionOptions {
+  const configuredUrl = optionalValue(config.get<string>('REDIS_URL'));
+  if (configuredUrl) {
+    const url = new URL(configuredUrl);
+    const database = url.pathname.slice(1);
+    return {
+      host: url.hostname,
+      port: Number(url.port || 6379),
+      username: url.username ? decodeURIComponent(url.username) : undefined,
+      password: url.password ? decodeURIComponent(url.password) : undefined,
+      db: database ? Number(database) : undefined,
+      tls: url.protocol === 'rediss:' ? {} : undefined,
+      maxRetriesPerRequest: null,
+    };
+  }
+
+  return {
+    host: config.get<string>('REDIS_HOST') || '127.0.0.1',
+    port: Number(config.get<string>('REDIS_PORT') || 6379),
+    username: optionalValue(config.get<string>('REDIS_USERNAME')),
+    password: optionalValue(config.get<string>('REDIS_PASSWORD')),
+    tls: config.get<string>('REDIS_TLS') === 'true' ? {} : undefined,
+    maxRetriesPerRequest: null,
+  };
+}
+
 @Module({
   imports: [
     BullModule.forRootAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
       useFactory: (config: ConfigService) => ({
-        connection: {
-          host: config.get<string>('REDIS_HOST') || '127.0.0.1',
-          port: Number(config.get<string>('REDIS_PORT') || 6379),
-          username: optionalValue(config.get<string>('REDIS_USERNAME')),
-          password: optionalValue(config.get<string>('REDIS_PASSWORD')),
-          tls: config.get<string>('REDIS_TLS') === 'true' ? {} : undefined,
-          maxRetriesPerRequest: null,
-        },
+        connection: redisConnection(config),
       }),
     }),
     BullModule.registerQueue(

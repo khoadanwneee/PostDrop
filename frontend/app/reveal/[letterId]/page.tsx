@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import { ReplyVideoRecorder } from '@/app/components/reveal/ReplyVideoRecorder';
+import { RevealLetterDesign } from '@/app/components/reveal/RevealLetterDesign';
 import {
   exchangeRevealToken,
   fetchRevealAttachmentBlob,
@@ -71,10 +72,7 @@ function useAttachmentImages(
       cancelled = true;
       urls.forEach((url) => URL.revokeObjectURL(url));
     };
-    // attachments is derived fresh each render from `content`; only re-run
-    // when the letter/session actually changes.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [sessionToken]);
+  }, [attachments, sessionToken]);
 
   return images;
 }
@@ -95,6 +93,7 @@ export default function RevealPage() {
   const [mergeProgress, setMergeProgress] = useState(0);
   const [mergeError, setMergeError] = useState<string | null>(null);
   const [mergedVideoUrl, setMergedVideoUrl] = useState<string | null>(null);
+  const [originalVideoUrl, setOriginalVideoUrl] = useState<string | null>(null);
 
   const letterCardRef = useRef<HTMLDivElement>(null);
 
@@ -164,6 +163,7 @@ export default function RevealPage() {
   const futureVideoAttachment = presentation?.attachments.find(
     (attachment) => attachment.role === 'future_video',
   );
+  const futureVideoPath = futureVideoAttachment?.contentPath;
   const visibleAttachments = useMemo(
     () =>
       (presentation?.attachments ?? []).filter(
@@ -176,8 +176,28 @@ export default function RevealPage() {
     sessionToken,
   );
 
-  const paperColor =
-    (presentation && PAPER_COLORS[presentation.paper]) || PAPER_COLORS.ivory;
+  useEffect(() => {
+    if (!futureVideoPath || !sessionToken) return;
+    let cancelled = false;
+    let objectUrl = '';
+    void fetchRevealAttachmentBlob(
+      futureVideoPath,
+      sessionToken,
+    ).then((blob) => {
+      if (!blob || cancelled) return;
+      objectUrl = URL.createObjectURL(blob);
+      setOriginalVideoUrl(objectUrl);
+    });
+    return () => {
+      cancelled = true;
+      if (objectUrl) URL.revokeObjectURL(objectUrl);
+      setOriginalVideoUrl(null);
+    };
+  }, [futureVideoPath, sessionToken]);
+
+  const paperKey =
+    presentation?.designSnapshot?.paper ?? presentation?.paper ?? 'ivory';
+  const paperColor = PAPER_COLORS[paperKey.toLowerCase()] || PAPER_COLORS.ivory;
   const fontClass = `reveal-font-${presentation?.font ?? 'serif'}`;
 
   const handleDownloadPng = async () => {
@@ -282,41 +302,69 @@ export default function RevealPage() {
 
       <section
         ref={letterCardRef}
-        className={`reveal-letter-card ${fontClass}`}
+        className={`reveal-letter-card ${
+          presentation.designSnapshot ? 'reveal-letter-card-design' : fontClass
+        }`}
         style={{ background: paperColor }}
       >
-        <span className="eyebrow">GỬI ĐẾN {presentation.recipientName}</span>
-        <h1 className="reveal-letter-title">{presentation.title}</h1>
-        <p className="reveal-letter-content">{presentation.content}</p>
+        {presentation.designSnapshot ? (
+          <RevealLetterDesign
+            snapshot={presentation.designSnapshot}
+            title={presentation.title}
+            content={presentation.content}
+            font={presentation.font}
+            attachments={visibleAttachments}
+            attachmentImages={attachmentImages}
+          />
+        ) : (
+          <>
+            <span className="eyebrow">GỬI ĐẾN {presentation.recipientName}</span>
+            <h1 className="reveal-letter-title">{presentation.title}</h1>
+            <p className="reveal-letter-content">{presentation.content}</p>
 
-        {visibleAttachments.map((attachment) => {
-          const url = attachmentImages[attachment.id];
-          if (!url) return null;
-          const hasPlacement =
-            attachment.x !== undefined && attachment.y !== undefined;
-          return (
-            <img
-              key={attachment.id}
-              src={url}
-              alt={attachment.altText || ''}
-              className="reveal-attachment-image"
-              style={
-                hasPlacement
-                  ? {
-                      position: 'absolute',
-                      left: `${attachment.x}%`,
-                      top: `${attachment.y}%`,
-                      transform: `translate(-50%, -50%) scale(${
-                        attachment.scale ?? 1
-                      }) rotate(${attachment.rotation ?? 0}deg)`,
-                      zIndex: attachment.zIndex,
-                    }
-                  : undefined
-              }
-            />
-          );
-        })}
+            {visibleAttachments.map((attachment) => {
+              const url = attachmentImages[attachment.id];
+              if (!url) return null;
+              const hasPlacement =
+                attachment.x !== undefined && attachment.y !== undefined;
+              return (
+                <img
+                  key={attachment.id}
+                  src={url}
+                  alt={attachment.altText || ''}
+                  className="reveal-attachment-image"
+                  style={
+                    hasPlacement
+                      ? {
+                          position: 'absolute',
+                          left: `${attachment.x}%`,
+                          top: `${attachment.y}%`,
+                          transform: `translate(-50%, -50%) scale(${
+                            attachment.scale ?? 1
+                          }) rotate(${attachment.rotation ?? 0}deg)`,
+                          zIndex: attachment.zIndex,
+                        }
+                      : undefined
+                  }
+                />
+              );
+            })}
+          </>
+        )}
       </section>
+
+      {futureVideoAttachment && originalVideoUrl && (
+        <section className="reveal-reply-section reveal-original-video-section">
+          <h2>Lời nhắn video từ ngày lá thư được viết</h2>
+          <video
+            src={originalVideoUrl}
+            controls
+            playsInline
+            preload="metadata"
+            className="reveal-original-video"
+          />
+        </section>
+      )}
 
       <div className="reveal-actions">
         <button

@@ -17,6 +17,7 @@ import {
 import { hasMeaningfulEditorData } from '@/app/lib/letter-editor/state';
 import type {
   EditorInteractionMode,
+  LetterDesignSnapshot,
   LetterFont,
   PaperOrientation,
   StickerDefinition,
@@ -37,9 +38,13 @@ export interface LetterEditorInitialDraft {
   userElements: ThemeElement[];
 }
 
+export interface LetterEditorChange extends LetterEditorInitialDraft {
+  designSnapshot: LetterDesignSnapshot;
+}
+
 interface LetterEditorProps {
   initialDraft: LetterEditorInitialDraft;
-  onChange: (draft: LetterEditorInitialDraft) => void;
+  onChange: (draft: LetterEditorChange) => void;
 }
 
 function notify(message: string, type = 'success') {
@@ -101,6 +106,9 @@ export function LetterEditor({ initialDraft, onChange }: LetterEditorProps) {
   }, []);
 
   useEffect(() => {
+    const snapshotOrientation = orientation ?? 'portrait';
+    const snapshotTheme =
+      editor.selectedTheme ?? getDefaultThemeForOrientation(snapshotOrientation);
     onChange({
       paperOrientation: orientation,
       selectedThemeId,
@@ -108,14 +116,29 @@ export function LetterEditor({ initialDraft, onChange }: LetterEditorProps) {
       letterContent: editor.letterContent,
       letterTitle: editor.letterTitle,
       userElements: elements.filter((element) => element.source === 'user'),
+      designSnapshot: {
+        schemaVersion: 1,
+        paperOrientation: snapshotOrientation,
+        selectedThemeId: selectedThemeId ?? snapshotTheme.id,
+        paper: paperColor,
+        canvas: { ...snapshotTheme.canvas },
+        typography: { ...snapshotTheme.typography },
+        safeArea: { ...snapshotTheme.safeArea },
+        elements: elements.map((element) => ({
+          ...element,
+          initial: { ...element.initial },
+        })),
+      },
     });
   }, [
     editor.letterContent,
     editor.letterTitle,
+    editor.selectedTheme,
     elements,
     letterFont,
     onChange,
     orientation,
+    paperColor,
     selectedThemeId,
   ]);
 

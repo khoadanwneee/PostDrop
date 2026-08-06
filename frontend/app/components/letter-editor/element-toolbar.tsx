@@ -53,7 +53,7 @@ export function ElementToolbar({
 
   const handleFile = (file?: File) => {
     if (!file) return;
-    if (!file.type.startsWith('image/')) {
+    if (!['image/gif', 'image/jpeg', 'image/png', 'image/webp'].includes(file.type)) {
       window.dispatchEvent(
         new CustomEvent('postdrop-editor-toast', {
           detail: { message: 'Hãy chọn một tệp hình ảnh.', type: 'error' },
@@ -139,7 +139,7 @@ export function ElementToolbar({
           ref={fileInputRef}
           className="sr-only"
           type="file"
-          accept="image/*"
+          accept="image/gif,image/jpeg,image/png,image/webp"
           onChange={(event) => {
             handleFile(event.target.files?.[0]);
             event.target.value = '';

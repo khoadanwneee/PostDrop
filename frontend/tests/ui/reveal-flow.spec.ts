@@ -18,6 +18,18 @@ describe('reveal-day delivery page', () => {
     join(__dirname, '..', '..', 'app', 'lib', 'reveal', 'mergeVideos.ts'),
     'utf8',
   );
+  const revealDesign = readFileSync(
+    join(
+      __dirname,
+      '..',
+      '..',
+      'app',
+      'components',
+      'reveal',
+      'RevealLetterDesign.tsx',
+    ),
+    'utf8',
+  );
 
   it('exchanges the capability token and fetches decrypted content through the real reveal API', () => {
     expect(revealClient).toContain("fetch('/api/reveal/exchange'");
@@ -45,5 +57,17 @@ describe('reveal-day delivery page', () => {
   it('merges the original and reply videos entirely client-side, never re-uploading the result', () => {
     expect(mergeVideos).toContain('@ffmpeg/ffmpeg');
     expect(revealPage).not.toMatch(/mergedVideoUrl.*apiFetch/s);
+  });
+
+  it('reuses the editor canvas for versioned design snapshots', () => {
+    expect(revealPage).toContain('<RevealLetterDesign');
+    expect(revealDesign).toContain('<LetterCanvas');
+    expect(revealDesign).toContain('snapshot.elements.map');
+  });
+
+  it('shows the original sealed future video with native controls', () => {
+    expect(revealPage).toContain('setOriginalVideoUrl');
+    expect(revealPage).toContain('className="reveal-original-video"');
+    expect(revealPage).toContain('controls');
   });
 });

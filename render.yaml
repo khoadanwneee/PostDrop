@@ -31,11 +31,27 @@ services:
         value: production
       - key: SUPABASE_URL
         sync: false
-      - key: SUPABASE_ANON_KEY
+      - key: SUPABASE_PUBLISHABLE_KEY
         sync: false
       - key: SUPABASE_SERVICE_ROLE_KEY
         sync: false
+      - key: LETTER_ENCRYPTION_KEY
+        sync: false
+      - key: REVEAL_TOKEN_SECRET
+        sync: false
+      - key: PUBLIC_APP_URL
+        sync: false
       - key: REDIS_URL
         sync: false
+      - key: GMAIL_CLIENT_ID
+        sync: false
+      - key: GMAIL_CLIENT_SECRET
+        sync: false
+      - key: GMAIL_REFRESH_TOKEN
+        sync: false
+      - key: GMAIL_SENDER_EMAIL
+        sync: false
+      - key: GMAIL_SENDER_NAME
+        value: PostDrop
       - key: JWT_SECRET
         generateValue: true
